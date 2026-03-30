@@ -1,216 +1,131 @@
 // src/pages/LandingPage.tsx
-
-import { useState, useContext } from "react";
-import type { FormEvent } from "react";
+import { useState, useContext, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaUser, FaLock } from "react-icons/fa";
+import { FaUser, FaLock, FaClock, FaUsers, FaChartBar, FaEnvelope } from "react-icons/fa";
 
 import { AuthContext } from "../context/AuthContext";
 import CNASLogo from "../assets/CNAS_logo.png";
-import bgImage from "../assets/queue.jpg"; // ⚠️ CHANGE this to your image name
+import styles from "./LandingPage.module.css";
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
-  const [showLogin, setShowLogin] = useState<boolean>(false);
-  const [username, setUsername] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
+  const [showLogin, setShowLogin] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<"agent" | "admin">("agent");
 
   const handleLogin = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     login(username, password, role);
-
     if (role === "agent") navigate("/agent");
     if (role === "admin") navigate("/admin");
   };
 
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundImage: `url(${bgImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        position: "relative",
-        fontFamily: "sans-serif",
-      }}
-    >
-      {/* 🔥 DARK OVERLAY */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundColor: "rgba(0,0,0,0.6)",
-        }}
-      />
+    <div className={styles.landing}>
+      {/* HEADER */}
+      <header className={styles.header}>
+        <div className={styles.logoContainer}>
+          <img src={CNASLogo} style={{ height: "45px" }} />
+          <span>وزارة العمل والتشغيل والضمان الاجتماعي</span>
+        </div>
 
-      {/* 🔥 CONTENT */}
-      <div style={{ position: "relative", zIndex: 2 }}>
-        
-        {/* HEADER */}
-        <header style={{ textAlign: "center", padding: "30px" }}>
-          <img src={CNASLogo} alt="CNAS Logo" style={{ height: "60px" }} />
-          <p style={{ color: "#ddd", marginTop: "10px" }}>
-            وزارة العمل والتشغيل والضمان الاجتماعي
-          </p>
-        </header>
+        <nav className={styles.nav}>
+          <span onClick={() => scrollTo("how-it-works")}>كيف يعمل النظام؟</span>
+          <span onClick={() => scrollTo("services")}>الخدمات</span>
+          <span onClick={() => scrollTo("contact")}>اتصل بنا</span>
+        </nav>
 
-        {/* HERO */}
-        <section style={{ textAlign: "center", marginTop: "80px", color: "#fff" }}>
-          <h1 style={{ fontSize: "40px", marginBottom: "20px" }}>
-            نظام إدارة الطوابير
-          </h1>
+        <button className={styles.loginButton} onClick={() => setShowLogin(true)}>
+          تسجيل الدخول
+        </button>
+      </header>
 
-          <p style={{ fontSize: "18px", marginBottom: "40px" }}>
-            تنظيم أفضل، انتظار أقل، خدمة أسرع
-          </p>
+      {/* HERO */}
+      <section
+        className={styles.hero}
+        style={{ backgroundImage: `url('/queue.jpg')` }}
+      >
+        <div className={styles.overlay}></div>
+        <div className={styles.heroContent}>
+          <h1>نظام إدارة الطوابير CNAS</h1>
+          <p>تجربة رقمية حديثة لتنظيم الخدمات وتقليل وقت الانتظار</p>
+          <button className={styles.getTicketButton} onClick={() => navigate("/beneficiary")}>
+            الحصول على تذكرة
+          </button>
+        </div>
+      </section>
 
-          <div style={{ display: "flex", justifyContent: "center", gap: "20px", flexWrap: "wrap" }}>
-            
-            {/* BENEFICIARY */}
-            <button
-              onClick={() => navigate("/beneficiary")}
-              style={{
-                fontSize: "24px",
-                padding: "25px 60px",
-                borderRadius: "12px",
-                backgroundColor: "#007bff",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              دخول كمستفيد
-            </button>
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className={styles.section}>
+        <h2>كيف يعمل النظام؟</h2>
+        <div style={{ display: "flex", justifyContent: "center", gap: "40px", marginTop: "40px", flexWrap: "wrap" }}>
+          <div><FaUser size={30} /><p>اختيار الخدمة</p></div>
+          <div><FaClock size={30} /><p>انتظار الدور</p></div>
+          <div><FaUsers size={30} /><p>التوجه للشباك</p></div>
+        </div>
+      </section>
 
-            {/* LOGIN */}
-            <button
-              onClick={() => setShowLogin(true)}
-              style={{
-                fontSize: "18px",
-                padding: "20px 40px",
-                borderRadius: "12px",
-                backgroundColor: "#28a745",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              تسجيل الدخول
-            </button>
-
+      {/* SERVICES */}
+      <section id="services" className={`${styles.section} ${styles.servicesSection}`}>
+        <h2>الخدمات</h2>
+        <div className={styles.serviceCards}>
+          <div className={styles.serviceCard}>
+            <h3>الاداءات</h3>
+            <p>خدمات الضمان الاجتماعي المختلفة</p>
           </div>
-        </section>
+          <div className={styles.serviceCard}>
+            <h3>المراقبة الطبية</h3>
+            <p>متابعة الحالات الصحية والتحقق</p>
+          </div>
+        </div>
+      </section>
 
-        {/* FOOTER */}
-        <footer
-          style={{
-            position: "absolute",
-            bottom: "20px",
-            width: "100%",
-            textAlign: "center",
-            color: "#ccc",
-          }}
-        >
-          جميع الحقوق محفوظة © CNAS 2026
-        </footer>
-      </div>
+      {/* STATS */}
+      <section className={`${styles.section} ${styles.statsSection}`}>
+        <h2>إحصائيات</h2>
+        <div className={styles.statsCards}>
+          <div><FaChartBar size={30} /><h3>+500</h3><p>تذكرة يومياً</p></div>
+          <div><FaUsers size={30} /><h3>+1000</h3><p>مستفيد</p></div>
+        </div>
+      </section>
 
-      {/* 🔥 LOGIN MODAL */}
+      {/* CONTACT */}
+      <section id="contact" className={`${styles.section} ${styles.contactSection}`}>
+        <h2>اتصل بنا</h2>
+        <p>البريد الإلكتروني: contact@cnas.dz</p>
+        <p>الهاتف: +213 21 123 456</p>
+      </section>
+
+      {/* FOOTER */}
+      <footer className={styles.footer}>
+        <div style={{ marginBottom: "10px" }}>
+          <FaEnvelope style={{ marginRight: "5px" }} />
+          contact@cnas.dz
+        </div>
+        © CNAS 2026 - جميع الحقوق محفوظة
+      </footer>
+
+      {/* LOGIN MODAL */}
       {showLogin && (
-        <div
-          onClick={() => setShowLogin(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#fff",
-              padding: "40px",
-              borderRadius: "12px",
-              minWidth: "320px",
-            }}
-          >
-            <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
-              تسجيل الدخول
-            </h2>
-
+        <div className={styles.loginOverlay} onClick={() => setShowLogin(false)}>
+          <div className={styles.loginModal} onClick={(e) => e.stopPropagation()}>
+            <h2>تسجيل الدخول</h2>
             <form onSubmit={handleLogin}>
-              {/* USERNAME */}
-              <div style={{ position: "relative", marginBottom: "20px" }}>
-                <input
-                  type="text"
-                  placeholder="اسم المستخدم"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "10px 40px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                  }}
-                />
-                <FaUser style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)" }} />
-              </div>
-
-              {/* PASSWORD */}
-              <div style={{ position: "relative", marginBottom: "20px" }}>
-                <input
-                  type="password"
-                  placeholder="كلمة المرور"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "10px 40px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                  }}
-                />
-                <FaLock style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)" }} />
-              </div>
-
-              {/* ROLE */}
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as "agent" | "admin")}
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: "6px",
-                  marginBottom: "20px",
-                }}
-              >
+              <input placeholder="اسم المستخدم" value={username} onChange={(e) => setUsername(e.target.value)} />
+              <input type="password" placeholder="كلمة المرور" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <select value={role} onChange={(e) => setRole(e.target.value as "agent" | "admin")}>
                 <option value="agent">وكيل</option>
                 <option value="admin">مسؤول</option>
               </select>
-
-              {/* BUTTON */}
-              <button
-                type="submit"
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  borderRadius: "6px",
-                  backgroundColor: "#007bff",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                دخول
-              </button>
+              <button type="submit">دخول</button>
             </form>
           </div>
         </div>

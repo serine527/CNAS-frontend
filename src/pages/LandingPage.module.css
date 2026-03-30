@@ -1,0 +1,180 @@
+/* src/pages/LandingPage.module.css */
+
+/* ===== GLOBAL ===== */
+.landing {
+  font-family: "sans-serif";
+  direction: rtl;
+}
+
+/* ===== HEADER ===== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 40px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav {
+  display: flex;
+  gap: 25px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.loginButton {
+  padding: 10px 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+/* ===== HERO ===== */
+.hero {
+  height: 90vh;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7));
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+}
+
+.heroContent h1 {
+  font-size: 42px;
+  margin-bottom: 20px;
+}
+
+.heroContent p {
+  margin-bottom: 30px;
+}
+
+.getTicketButton {
+  font-size: 22px;
+  padding: 18px 40px;
+  border-radius: 10px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+/* ===== SECTIONS ===== */
+.section {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.servicesSection {
+  background: #f5f7fa;
+}
+
+.statsSection {
+  text-align: center;
+}
+
+.statsCards {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 30px;
+}
+
+.serviceCards {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+}
+
+.serviceCard {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 280px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* ===== CONTACT ===== */
+.contactSection {
+  background: #fff;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  padding: 30px;
+  background: #222;
+  color: #fff;
+  text-align: center;
+}
+
+/* ===== LOGIN MODAL ===== */
+.loginOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.loginModal {
+  width: 350px;
+  padding: 30px;
+  border-radius: 15px;
+  backdrop-filter: blur(15px);
+  background: rgba(255,255,255,0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  color: #fff;
+}
+
+.loginModal h2 {
+  text-align: center;
+}
+
+.loginModal form input,
+.loginModal form select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  margin-top: 15px;
+}
+
+.loginModal form button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
