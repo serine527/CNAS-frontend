@@ -10,7 +10,7 @@
 
   background: #f0f4f8;
 
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Tajawal", sans-serif;
 
   direction: rtl;
 
@@ -314,9 +314,9 @@
 
   background-color: rgba(245, 158, 11, 0.13);
 
-  border-color: #f59e0b;
+  border-color: #b1740bcb;
 
-  color: #f59e0b;
+  color: #d3b52e;
 
 }
 
@@ -947,15 +947,10 @@
 /* ─── Actions Grid ────────────────────────────────────────────────────────── */
 
 .agent-actions-grid {
-
-  display: grid;
-
-  grid-template-columns: 1fr 1fr;
-
+    display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
   gap: 12px;
-
 }
-
 
 
 .agent-action-btn {
@@ -1041,6 +1036,17 @@
 
 
 /* Variants */
+.agent-btn-danger {
+
+  background: linear-gradient(135deg, #e41414de, #c74242);
+
+  color: #fff;
+
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+border: none;
+  outline: none;
+  grid-column: 3;
+}
 
 .agent-btn-primary {
 
@@ -1054,20 +1060,21 @@
 
   padding: 22px 32px;
 
-  grid-column: 1 / -1;
-
+  grid-column: 2;
 }
 
 
 
 .agent-btn-pause {
 
-  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  background: linear-gradient(135deg, #dd9518d3, #d6ae47);
 
+border: 2px solid rgba(255, 255, 255, .2);
+box-shadow: 0 0 10px rgba(0, 0, 0, .2);
+backdrop-filter: blur(30px);
   color: #fff;
-
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
-
+ 
+  grid-column: 1;
 }
 
 
@@ -1080,29 +1087,22 @@
 
   box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
 
+    grid-column: 1;
 }
 
 
 
 .agent-btn-secondary {
 
-  background: #f1f5f9;
+  background: #fff;
 
-  color: #334155;
-
+  color: #20324d;
+ grid-column: 1 / -1;
+  
 }
 
 
 
-.agent-btn-danger {
-
-  background: linear-gradient(135deg, #ef4444, #f87171);
-
-  color: #fff;
-
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
-
-}
 
 
 
@@ -1111,8 +1111,7 @@
 .agent-done-panel {
 
   background: #fff;
-
-  border-radius: 16px;
+   border-radius: 16px;
 
   padding: 18px 22px;
 
@@ -1173,4 +1172,3 @@
   padding: 2px 10px;
 
 }
-

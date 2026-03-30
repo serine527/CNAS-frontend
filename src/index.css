@@ -1,12 +1,27 @@
 /* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@200;400;700;900&display=swap');
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Tajawal", sans-serif;
   background-color: #f8f9fa;
+}
+
+/* force inheritance everywhere */
+body * {
+  font-family: inherit;
+}
+h1, h2, h3 {
+  font-weight: 700;
+}
+
+.agent-big-ticket-num {
+  font-weight: 900;
 }

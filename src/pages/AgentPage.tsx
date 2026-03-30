@@ -4,6 +4,7 @@ import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import CNASLogo from "../assets/CNAS_logo.png";
+import { AiFillSound } from "react-icons/ai";
 import "./AgentPage.css";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -31,19 +32,19 @@ const generateQueue = (): Ticket[] =>
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_LABEL: Record<TicketStatus, string> = {
-  waiting:  "في الانتظار",
-  serving:  "قيد الخدمة",
-  paused:   "موقوف",
-  done:     "تمت الخدمة",
-  skipped:  "تم التخطي",
+  waiting: "في الانتظار",
+  serving: "قيد الخدمة",
+  paused: "موقوف",
+  done: "تمت الخدمة",
+  skipped: "تم التخطي",
 };
 
 const STATUS_COLOR: Record<TicketStatus, string> = {
   waiting: "#94a3b8",
-  serving: "#22c55e",
-  paused:  "#f59e0b",
-  done:    "#3b82f6",
-  skipped: "#ef4444",
+  serving: "#16a84c",
+  paused: "#d19c40",
+  done: "#3b82f6",
+  skipped: "#a72222",
 };
 
 const playDing = () => {
@@ -51,18 +52,14 @@ const playDing = () => {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
-
     oscillator.connect(gain);
     gain.connect(ctx.destination);
-
     oscillator.type = "sine";
     oscillator.frequency.setValueAtTime(880, ctx.currentTime);
     gain.gain.setValueAtTime(0.4, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + 0.6);
-
     oscillator.onended = () => ctx.close();
   } catch (e) {
     console.warn("Audio playback failed:", e);
@@ -86,14 +83,14 @@ export default function AgentPage() {
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
 
-  const [queue, setQueue]               = useState<Ticket[]>(generateQueue());
-  const [isPaused, setIsPaused]         = useState(false);
-  const [servedToday, setServedToday]   = useState(0);
+  const [queue, setQueue] = useState<Ticket[]>(generateQueue());
+  const [isPaused, setIsPaused] = useState(false);
+  const [servedToday, setServedToday] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
 
   const current = queue.find((t) => t.status === "serving") ?? null;
   const waiting = queue.filter((t) => t.status === "waiting");
-  const done    = queue.filter((t) => t.status === "done" || t.status === "skipped");
+  const done = queue.filter((t) => t.status === "done" || t.status === "skipped");
 
   const notify = (msg: string) => {
     setNotification(msg);
@@ -106,8 +103,8 @@ export default function AgentPage() {
     if (!nextWaiting) return notify("لا توجد تذاكر في الانتظار.");
     setQueue((prev) =>
       prev.map((t) => {
-        if (t.status === "serving")   return { ...t, status: "done" };
-        if (t.id === nextWaiting.id)  return { ...t, status: "serving" };
+        if (t.status === "serving") return { ...t, status: "done" };
+        if (t.id === nextWaiting.id) return { ...t, status: "serving" };
         return t;
       })
     );
@@ -132,7 +129,7 @@ export default function AgentPage() {
 
   const recallCurrent = () => {
     if (!current) return;
-    playDing()
+    playDing();
     notify(`إعادة استدعاء التذكرة ${current.number}`);
   };
 
@@ -142,14 +139,13 @@ export default function AgentPage() {
   };
 
   const statCards = [
-    { label: "في الانتظار",  value: waiting.length, color: "#3b82f6" },
-    { label: "تمت خدمتهم",   value: servedToday,    color: "#22c55e" },
-    { label: "إجمالي اليوم", value: queue.length,   color: "#8b5cf6" },
+    { label: "في الانتظار", value: waiting.length, color: "#3b82f6" },
+    { label: "تمت خدمتهم", value: servedToday, color: "#22c55e" },
+    { label: "إجمالي اليوم", value: queue.length, color: "#8b5cf6" },
   ];
 
   return (
     <div className="agent-root">
-
       {/* Background decorations */}
       <div className="agent-bg-circle-1" />
       <div className="agent-bg-circle-2" />
@@ -161,9 +157,8 @@ export default function AgentPage() {
         </div>
       )}
 
-      {/* ══════════════ HEADER ══════════════ */}
+      {/* HEADER */}
       <header className="agent-header">
-
         <div className="agent-header-left">
           <img src={CNASLogo} alt="CNAS" className="agent-header-logo" />
           <div className="agent-header-text">
@@ -195,23 +190,16 @@ export default function AgentPage() {
             تسجيل الخروج
           </button>
         </div>
-
       </header>
 
-      {/* ══════════════ MAIN ══════════════ */}
+      {/* MAIN */}
       <main className="agent-main">
-
-        {/* ── Sidebar: Stats + Queue List ── */}
+        {/* Sidebar */}
         <aside className="agent-sidebar">
-
           {/* Stats */}
           <div className="agent-stats-row">
             {statCards.map((s) => (
-              <div
-                key={s.label}
-                className="agent-stat-card"
-                style={{ borderTop: `3px solid ${s.color}` }}
-              >
+              <div key={s.label} className="agent-stat-card" style={{ borderTop: `3px solid ${s.color}` }}>
                 <span className="agent-stat-value" style={{ color: s.color }}>
                   {s.value}
                 </span>
@@ -226,20 +214,12 @@ export default function AgentPage() {
               <span className="agent-panel-title">قائمة الانتظار</span>
               <span className="agent-queue-count">{waiting.length} متبقٍ</span>
             </div>
-
             <div className="agent-ticket-list">
               {queue.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className={`agent-ticket-row ${ticket.status}`}
-                >
-                  <span
-                    className="agent-ticket-num"
-                    style={{ color: STATUS_COLOR[ticket.status] }}
-                  >
+                <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
+                  <span className="agent-ticket-num" style={{ color: STATUS_COLOR[ticket.status] }}>
                     {ticket.number}
                   </span>
-
                   <div className="agent-ticket-info">
                     <span className="agent-ticket-service">{ticket.service}</span>
                     <span className="agent-ticket-time">
@@ -247,26 +227,17 @@ export default function AgentPage() {
                       {ticket.status === "waiting" && ` · انتظر ${ticket.waitMinutes} د`}
                     </span>
                   </div>
-
-                  <span
-                    className="agent-ticket-badge"
-                    style={{
-                      backgroundColor: STATUS_COLOR[ticket.status] + "22",
-                      color: STATUS_COLOR[ticket.status],
-                    }}
-                  >
+                  <span className="agent-ticket-badge" style={{ backgroundColor: STATUS_COLOR[ticket.status] + "22", color: STATUS_COLOR[ticket.status] }}>
                     {STATUS_LABEL[ticket.status]}
                   </span>
                 </div>
               ))}
             </div>
           </div>
-
         </aside>
 
-        {/* ── Main Column: Current Ticket + Controls ── */}
+        {/* Main Column */}
         <section className="agent-main-col">
-
           {/* Current Ticket Card */}
           <div className="agent-current-card">
             <div className="agent-current-card-header">
@@ -303,22 +274,9 @@ export default function AgentPage() {
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* FIXED ACTION BUTTONS */}
           <div className="agent-actions-grid">
-
-            <button
-              onClick={callNext}
-              disabled={isPaused || waiting.length === 0}
-              className="agent-action-btn agent-btn-primary"
-              style={{ opacity: isPaused || waiting.length === 0 ? 0.5 : 1 }}
-            >
-              <span className="agent-btn-icon">▶▶</span>
-              استدعاء التذكرة التالية
-              {waiting[0] && (
-                <span className="agent-btn-sub">{waiting[0].number}</span>
-              )}
-            </button>
-
+            {/* Yellow - Left */}
             <button
               onClick={togglePause}
               className={`agent-action-btn ${isPaused ? "agent-btn-resume" : "agent-btn-pause"}`}
@@ -327,16 +285,19 @@ export default function AgentPage() {
               {isPaused ? "استئناف الخدمة" : "إيقاف مؤقت"}
             </button>
 
+            {/* Blue - Middle (wide) */}
             <button
-              onClick={recallCurrent}
-              disabled={!current}
-              className="agent-action-btn agent-btn-secondary"
-              style={{ opacity: current ? 1 : 0.4 }}
+              onClick={callNext}
+              disabled={isPaused || waiting.length === 0}
+              className="agent-action-btn agent-btn-primary"
+              style={{ opacity: isPaused || waiting.length === 0 ? 0.5 : 1 }}
             >
-              <span className="agent-btn-icon">🔊</span>
-              إعادة الاستدعاء
+              <span className="agent-btn-icon">▶▶</span>
+              استدعاء التذكرة التالية
+              {waiting[0] && <span className="agent-btn-sub">{waiting[0].number}</span>}
             </button>
 
+            {/* Red - Right */}
             <button
               onClick={skipCurrent}
               disabled={!current}
@@ -346,8 +307,20 @@ export default function AgentPage() {
               <span className="agent-btn-icon">⏭</span>
               تخطي التذكرة
             </button>
-
           </div>
+
+          {/* Recall button (placed below for now - clean look) */}
+          <button
+            onClick={recallCurrent}
+            disabled={!current}
+            className="agent-action-btn agent-btn-secondary"
+            style={{ marginTop: "12px", opacity: current ? 1 : 0.4 }}
+          >
+            <span className="agent-btn-icon">
+              <AiFillSound />
+            </span>
+            إعادة الاستدعاء
+          </button>
 
           {/* Done / Skipped Log */}
           {done.length > 0 && (
@@ -356,10 +329,7 @@ export default function AgentPage() {
               <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
                 {done.slice(-5).reverse().map((t) => (
                   <div key={t.id} className="agent-done-row">
-                    <span
-                      className="agent-done-num"
-                      style={{ color: STATUS_COLOR[t.status] }}
-                    >
+                    <span className="agent-done-num" style={{ color: STATUS_COLOR[t.status] }}>
                       {t.number}
                     </span>
                     <span className="agent-done-service">{t.service}</span>
@@ -377,7 +347,6 @@ export default function AgentPage() {
               </div>
             </div>
           )}
-
         </section>
       </main>
     </div>
