@@ -77,11 +77,19 @@ export default function LandingPage() {
       <section id="services" className={`${styles.section} ${styles.servicesSection}`}>
         <h2>الخدمات</h2>
         <div className={styles.serviceCards}>
-          <div className={styles.serviceCard}>
+          <div 
+            className={styles.serviceCard} 
+            onClick={() => navigate("/beneficiary")}
+            style={{ cursor: "pointer" }}
+          >
             <h3>الاداءات</h3>
             <p>خدمات الضمان الاجتماعي المختلفة</p>
           </div>
-          <div className={styles.serviceCard}>
+          <div 
+            className={styles.serviceCard} 
+            onClick={() => navigate("/beneficiary")}
+            style={{ cursor: "pointer" }}
+          >
             <h3>المراقبة الطبية</h3>
             <p>متابعة الحالات الصحية والتحقق</p>
           </div>

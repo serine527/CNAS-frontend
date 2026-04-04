@@ -1,0 +1,10 @@
+.ticket-card {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #007bff, #00c6ff);
+  color: white;
+  text-align: right;
+  direction: rtl;
+  font-family: "Cairo", sans-serif;
+}
