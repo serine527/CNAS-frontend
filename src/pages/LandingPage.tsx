@@ -1,5 +1,5 @@
 // src/pages/LandingPage.tsx
-import { useState, useContext, FormEvent } from "react";
+import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaClock, FaUsers, FaChartBar, FaEnvelope } from "react-icons/fa";
 
@@ -9,19 +9,6 @@ import styles from "./LandingPage.module.css";
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
-
-  const [showLogin, setShowLogin] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"agent" | "admin">("agent");
-
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    login(username, password, role);
-    if (role === "agent") navigate("/agent");
-    if (role === "admin") navigate("/admin");
-  };
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
@@ -43,7 +30,7 @@ export default function LandingPage() {
           <span onClick={() => scrollTo("contact")}>اتصل بنا</span>
         </nav>
 
-        <button className={styles.loginButton} onClick={() => setShowLogin(true)}>
+        <button className={styles.loginButton} onClick={() => navigate("/login")}>
           تسجيل الدخول
         </button>
       </header>
@@ -77,16 +64,16 @@ export default function LandingPage() {
       <section id="services" className={`${styles.section} ${styles.servicesSection}`}>
         <h2>الخدمات</h2>
         <div className={styles.serviceCards}>
-          <div 
-            className={styles.serviceCard} 
+          <div
+            className={styles.serviceCard}
             onClick={() => navigate("/beneficiary")}
             style={{ cursor: "pointer" }}
           >
             <h3>الاداءات</h3>
             <p>خدمات الضمان الاجتماعي المختلفة</p>
           </div>
-          <div 
-            className={styles.serviceCard} 
+          <div
+            className={styles.serviceCard}
             onClick={() => navigate("/beneficiary")}
             style={{ cursor: "pointer" }}
           >
@@ -120,24 +107,6 @@ export default function LandingPage() {
         </div>
         © CNAS 2026 - جميع الحقوق محفوظة
       </footer>
-
-      {/* LOGIN MODAL */}
-      {showLogin && (
-        <div className={styles.loginOverlay} onClick={() => setShowLogin(false)}>
-          <div className={styles.loginModal} onClick={(e) => e.stopPropagation()}>
-            <h2>تسجيل الدخول</h2>
-            <form onSubmit={handleLogin}>
-              <input placeholder="اسم المستخدم" value={username} onChange={(e) => setUsername(e.target.value)} />
-              <input type="password" placeholder="كلمة المرور" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <select value={role} onChange={(e) => setRole(e.target.value as "agent" | "admin")}>
-                <option value="agent">وكيل</option>
-                <option value="admin">مسؤول</option>
-              </select>
-              <button type="submit">دخول</button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1172,3 +1172,234 @@ backdrop-filter: blur(30px);
   padding: 2px 10px;
 
 }
+
+/* ─── Add these to your existing AgentPage.css ─────────────────────────────── */
+
+/* ── Mode Badge (header) ────────────────────────────────────────────────────── */
+.mode-badge-wrapper {
+  position: relative;
+}
+
+.mode-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: default;
+  border: 1.5px solid;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.mode-badge--single {
+  background: rgba(139, 92, 246, 0.10);
+  border-color: #8b5cf6;
+  color: #7c3aed;
+}
+
+.mode-badge--multi {
+  background: rgba(0, 71, 171, 0.10);
+  border-color: #0047ab;
+  color: #0047ab;
+}
+
+.mode-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.mode-badge__icon {
+  font-size: 15px;
+}
+
+.mode-badge__label {
+  white-space: nowrap;
+}
+
+/* ── Mode Tooltip ────────────────────────────────────────────────────────────── */
+.mode-tooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  z-index: 9000;
+  animation: fadeInDown 0.2s ease;
+}
+
+.mode-tooltip__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.mode-tooltip__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.mode-tooltip__key {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mode-tooltip__val {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.mode-tooltip__chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.mode-tooltip__service {
+  line-height: 1.5;
+  color: #334155;
+}
+
+.mode-tooltip__note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.6;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ── Assigned Service Banner ─────────────────────────────────────────────────── */
+.assigned-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 14px;
+  border: 1.5px solid;
+  padding: 14px 20px;
+  animation: fadeInDown 0.3s ease;
+}
+
+.assigned-banner__left {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.assigned-banner__chip {
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+  border-radius: 20px;
+  padding: 2px 10px;
+  width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.assigned-banner__label {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.assigned-banner__service {
+  font-size: 15px;
+  font-weight: 700;
+  flex: 1;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.assigned-banner__badge {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 4px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Queue category chip (inside queue panel header) ─────────────────────────── */
+.queue-category-chip {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 3px 10px;
+  border: 1px solid;
+}
+
+/* ── Ticket category pill (inside each ticket row, single mode) ──────────────── */
+.ticket-cat-pill {
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+
+/* ── Current ticket category chip (current card header) ─────────────────────── */
+.current-cat-chip {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 3px 12px;
+  border: 1px solid;
+  margin-right: auto;
+}
+.agent-unassigned-warning {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fffbeb;
+  border: 1.5px solid #fbbf24;
+  border-radius: 14px;
+  padding: 16px 20px;
+  animation: fadeInDown 0.3s ease;
+}
+ 
+.agent-unassigned-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+ 
+.agent-unassigned-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+ 
+.agent-unassigned-text strong {
+  font-size: 14px;
+  color: #92400e;
+  font-weight: 700;
+}
+ 
+.agent-unassigned-text span {
+  font-size: 12px;
+  color: #b45309;
+}

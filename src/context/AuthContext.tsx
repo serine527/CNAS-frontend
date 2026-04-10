@@ -1,43 +1,44 @@
 // src/context/AuthContext.tsx
-import { createContext, useState, ReactNode } from "react";
+import { createContext, useState } from "react";
+import type { ReactNode } from "react";
 
-type Role = "agent" | "admin" | "beneficiary";
+export type Role = "agent" | "admin" | "beneficiary";
 
 interface AuthContextType {
   username: string;
   role: Role | null;
-  login: (username: string, password: string, role: Role) => void;
+  agentId: number | null; // set on login for agents, null for admin/beneficiary
+  login: (username: string, password: string, role: Role, agentId?: number) => void;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   username: "",
   role: null,
+  agentId: null,
   login: () => {},
   logout: () => {},
 });
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider = ({ children }: AuthProviderProps) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [username, setUsername] = useState<string>("");
-  const [role, setRole] = useState<Role | null>(null);
+  const [role, setRole]         = useState<Role | null>(null);
+  const [agentId, setAgentId]   = useState<number | null>(null);
 
-  const login = (u: string, password: string, r: Role) => {
-    // You can validate password here if you want
+  const login = (u: string, _password: string, r: Role, id?: number) => {
     setUsername(u);
     setRole(r);
+    setAgentId(id ?? null);
   };
 
   const logout = () => {
     setUsername("");
     setRole(null);
+    setAgentId(null);
   };
 
   return (
-    <AuthContext.Provider value={{ username, role, login, logout }}>
+    <AuthContext.Provider value={{ username, role, agentId, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

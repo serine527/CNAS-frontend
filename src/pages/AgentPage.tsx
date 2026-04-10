@@ -3,11 +3,17 @@
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import {
+  useSystem,
+  allServices,
+  getCategoryForService,
+  type ServiceCategory,
+} from "../context/SystemContext";
 import CNASLogo from "../assets/CNAS_logo.png";
 import { AiFillSound } from "react-icons/ai";
 import "./AgentPage.css";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type TicketStatus = "waiting" | "serving" | "paused" | "done" | "skipped";
 
 interface Ticket {
@@ -18,17 +24,6 @@ interface Ticket {
   status: TicketStatus;
   waitMinutes: number;
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const generateQueue = (): Ticket[] =>
-  Array.from({ length: 12 }, (_, i) => ({
-    id: i + 1,
-    number: `A${String(i + 1).padStart(3, "0")}`,
-    service: ["تسوية المنازعات", "منح التعويضات", "استفسارات الضمان", "تحديث الملفات", "شهادات العمل"][i % 5],
-    arrivalTime: `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 === 0 ? "00" : "30"}`,
-    status: i === 0 ? "serving" : "waiting",
-    waitMinutes: (i + 1) * 7,
-  }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_LABEL: Record<TicketStatus, string> = {
@@ -47,6 +42,30 @@ const STATUS_COLOR: Record<TicketStatus, string> = {
   skipped: "#a72222",
 };
 
+const CATEGORY_LABEL: Record<ServiceCategory, string> = {
+  prestation: "خدمات الاستحقاقات",
+  medical: "الخدمات الطبية",
+};
+
+const CATEGORY_COLOR: Record<ServiceCategory, { bg: string; text: string; border: string }> = {
+  prestation: { bg: "rgba(0,71,171,0.09)", text: "#0047ab", border: "#0047ab" },
+  medical:    { bg: "rgba(22,168,76,0.10)", text: "#16a84c", border: "#16a84c" },
+};
+
+// ─── Mock queue generator ─────────────────────────────────────────────────────
+const generateQueue = (filterService?: string): Ticket[] => {
+  const pool = filterService ? [filterService] : allServices;
+  return Array.from({ length: 12 }, (_, i) => ({
+    id: i + 1,
+    number: `A${String(i + 1).padStart(3, "0")}`,
+    service: pool[i % pool.length],
+    arrivalTime: `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 === 0 ? "00" : "30"}`,
+    status: i === 0 ? "serving" : "waiting",
+    waitMinutes: (i + 1) * 7,
+  }));
+};
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
 const playDing = () => {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -66,7 +85,7 @@ const playDing = () => {
   }
 };
 
-// ─── Clock Sub-component ──────────────────────────────────────────────────────
+// ─── Clock ────────────────────────────────────────────────────────────────────
 function Clock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -78,19 +97,111 @@ function Clock() {
   );
 }
 
+// ─── Mode Badge (header button showing current mode) ─────────────────────────
+function ModeBadge({ isMulti, assignedService, category }: {
+  isMulti: boolean;
+  assignedService?: string;
+  category?: ServiceCategory;
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div className="mode-badge-wrapper" onMouseEnter={() => setShowTooltip(true)} onMouseLeave={() => setShowTooltip(false)}>
+      <div className={`mode-badge ${isMulti ? "mode-badge--multi" : "mode-badge--single"}`}>
+        <span className="mode-badge__dot" />
+        <span className="mode-badge__icon">{isMulti ? "⫶" : "◈"}</span>
+        <span className="mode-badge__label">
+          {isMulti ? "نظام متعدد الشبابيك" : "نظام شباك واحد"}
+        </span>
+      </div>
+
+      {showTooltip && (
+        <div className="mode-tooltip">
+          <div className="mode-tooltip__title">
+            {isMulti ? "وضع متعدد الشبابيك" : "وضع الشباك الواحد"}
+          </div>
+          {isMulti && assignedService ? (
+            <>
+              <div className="mode-tooltip__row">
+                <span className="mode-tooltip__key">التصنيف</span>
+                <span
+                  className="mode-tooltip__val mode-tooltip__chip"
+                  style={category ? {
+                    background: CATEGORY_COLOR[category].bg,
+                    color: CATEGORY_COLOR[category].text,
+                    border: `1px solid ${CATEGORY_COLOR[category].border}`,
+                  } : {}}
+                >
+                  {category ? CATEGORY_LABEL[category] : "—"}
+                </span>
+              </div>
+              <div className="mode-tooltip__row">
+                <span className="mode-tooltip__key">الخدمة المخصصة</span>
+                <span className="mode-tooltip__val mode-tooltip__service">{assignedService}</span>
+              </div>
+              <p className="mode-tooltip__note">
+                هذا الشباك مخصص حصراً لهذه الخدمة. التذاكر المعروضة مفلترة تلقائياً.
+              </p>
+            </>
+          ) : (
+            <p className="mode-tooltip__note">
+              يعالج هذا الشباك جميع الخدمات. لا يوجد تصفية مطبّقة.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Assigned Service Banner (shown inside main col in multi mode) ────────────
+function AssignedServiceBanner({ service, category }: { service: string; category: ServiceCategory }) {
+  const colors = CATEGORY_COLOR[category];
+  return (
+    <div className="assigned-banner" style={{ borderColor: colors.border, background: colors.bg }}>
+      <div className="assigned-banner__left">
+        <span className="assigned-banner__chip" style={{ color: colors.text, borderColor: colors.border }}>
+          {CATEGORY_LABEL[category]}
+        </span>
+        <span className="assigned-banner__label" style={{ color: colors.text }}>الخدمة المخصصة لهذا الشباك</span>
+      </div>
+      <div className="assigned-banner__service" style={{ color: colors.text }}>
+        {service}
+      </div>
+      <div className="assigned-banner__badge" style={{ background: colors.text }}>
+        مقيّد
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function AgentPage() {
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
+  const { logout, agentId, username } = useContext(AuthContext);
+  const { isMulti, getAgent } = useSystem();
 
-  const [queue, setQueue] = useState<Ticket[]>(generateQueue());
+  // Resolve this agent's assignment from the agents roster in SystemContext
+  const agentRecord      = agentId != null ? getAgent(agentId) : undefined;
+  const assignedService  = isMulti ? (agentRecord?.assignedService ?? undefined) : undefined;
+  const assignedCategory = isMulti && assignedService ? getCategoryForService(assignedService) : undefined;
+
+  // Queue is filtered to assigned service in multi mode, otherwise all services
+  const [queue, setQueue] = useState<Ticket[]>(() => generateQueue(assignedService));
   const [isPaused, setIsPaused] = useState(false);
   const [servedToday, setServedToday] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
 
+  // Re-generate queue whenever mode or assigned service changes
+  useEffect(() => {
+    setQueue(generateQueue(isMulti ? assignedService : undefined));
+    setServedToday(0);
+    setIsPaused(false);
+  }, [isMulti, assignedService]);
+
   const current = queue.find((t) => t.status === "serving") ?? null;
   const waiting = queue.filter((t) => t.status === "waiting");
-  const done = queue.filter((t) => t.status === "done" || t.status === "skipped");
+  const done    = queue.filter((t) => t.status === "done" || t.status === "skipped");
 
   const notify = (msg: string) => {
     setNotification(msg);
@@ -139,31 +250,30 @@ export default function AgentPage() {
   };
 
   const statCards = [
-    { label: "في الانتظار", value: waiting.length, color: "#3b82f6" },
-    { label: "تمت خدمتهم", value: servedToday, color: "#22c55e" },
-    { label: "إجمالي اليوم", value: queue.length, color: "#8b5cf6" },
+    { label: "في الانتظار",  value: waiting.length,  color: "#3b82f6" },
+    { label: "تمت خدمتهم",  value: servedToday,      color: "#22c55e" },
+    { label: "إجمالي اليوم", value: queue.length,     color: "#8b5cf6" },
   ];
 
   return (
     <div className="agent-root">
-      {/* Background decorations */}
       <div className="agent-bg-circle-1" />
       <div className="agent-bg-circle-2" />
 
-      {/* Toast Notification */}
+      {/* Toast */}
       {notification && (
         <div className="agent-toast">
           <span>{notification}</span>
         </div>
       )}
 
-      {/* HEADER */}
+      {/* ── HEADER ── */}
       <header className="agent-header">
         <div className="agent-header-left">
           <img src={CNASLogo} alt="CNAS" className="agent-header-logo" />
           <div className="agent-header-text">
             <span className="agent-header-title">الصندوق الوطني للتأمينات الاجتماعية</span>
-            <span className="agent-header-sub">لوحة تحكم الوكيل</span>
+            <span className="agent-header-sub">{username ? `الوكيل: ${username}` : "لوحة تحكم الوكيل"}</span>
           </div>
         </div>
 
@@ -182,6 +292,13 @@ export default function AgentPage() {
         </div>
 
         <div className="agent-header-right">
+          {/* Mode Badge */}
+          <ModeBadge
+            isMulti={isMulti}
+            assignedService={assignedService}
+            category={assignedCategory}
+          />
+
           <div className={`agent-status-badge ${isPaused ? "paused" : "active"}`}>
             <div className={`agent-status-dot ${isPaused ? "paused" : "active"}`} />
             {isPaused ? "موقوف" : "نشط"}
@@ -192,57 +309,117 @@ export default function AgentPage() {
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* ── MAIN ── */}
       <main className="agent-main">
         {/* Sidebar */}
         <aside className="agent-sidebar">
-          {/* Stats */}
           <div className="agent-stats-row">
             {statCards.map((s) => (
               <div key={s.label} className="agent-stat-card" style={{ borderTop: `3px solid ${s.color}` }}>
-                <span className="agent-stat-value" style={{ color: s.color }}>
-                  {s.value}
-                </span>
+                <span className="agent-stat-value" style={{ color: s.color }}>{s.value}</span>
                 <span className="agent-stat-label">{s.label}</span>
               </div>
             ))}
           </div>
 
-          {/* Queue List */}
+          {/* Queue Panel */}
           <div className="agent-queue-panel">
             <div className="agent-panel-header">
               <span className="agent-panel-title">قائمة الانتظار</span>
-              <span className="agent-queue-count">{waiting.length} متبقٍ</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {isMulti && assignedCategory && (
+                  <span
+                    className="queue-category-chip"
+                    style={{
+                      background: CATEGORY_COLOR[assignedCategory].bg,
+                      color: CATEGORY_COLOR[assignedCategory].text,
+                      border: `1px solid ${CATEGORY_COLOR[assignedCategory].border}`,
+                    }}
+                  >
+                    {CATEGORY_LABEL[assignedCategory]}
+                  </span>
+                )}
+                <span className="agent-queue-count">{waiting.length} متبقٍ</span>
+              </div>
             </div>
             <div className="agent-ticket-list">
-              {queue.map((ticket) => (
-                <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
-                  <span className="agent-ticket-num" style={{ color: STATUS_COLOR[ticket.status] }}>
-                    {ticket.number}
-                  </span>
-                  <div className="agent-ticket-info">
-                    <span className="agent-ticket-service">{ticket.service}</span>
-                    <span className="agent-ticket-time">
-                      وصل: {ticket.arrivalTime}
-                      {ticket.status === "waiting" && ` · انتظر ${ticket.waitMinutes} د`}
+              {queue.map((ticket) => {
+                const ticketCategory = getCategoryForService(ticket.service);
+                const catColors = CATEGORY_COLOR[ticketCategory];
+                return (
+                  <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
+                    <span className="agent-ticket-num" style={{ color: STATUS_COLOR[ticket.status] }}>
+                      {ticket.number}
+                    </span>
+                    <div className="agent-ticket-info">
+                      <span className="agent-ticket-service">{ticket.service}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                        {!isMulti && (
+                          <span
+                            className="ticket-cat-pill"
+                            style={{ background: catColors.bg, color: catColors.text }}
+                          >
+                            {CATEGORY_LABEL[ticketCategory]}
+                          </span>
+                        )}
+                        <span className="agent-ticket-time">
+                          وصل: {ticket.arrivalTime}
+                          {ticket.status === "waiting" && ` · انتظر ${ticket.waitMinutes} د`}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className="agent-ticket-badge"
+                      style={{
+                        backgroundColor: STATUS_COLOR[ticket.status] + "22",
+                        color: STATUS_COLOR[ticket.status],
+                      }}
+                    >
+                      {STATUS_LABEL[ticket.status]}
                     </span>
                   </div>
-                  <span className="agent-ticket-badge" style={{ backgroundColor: STATUS_COLOR[ticket.status] + "22", color: STATUS_COLOR[ticket.status] }}>
-                    {STATUS_LABEL[ticket.status]}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </aside>
 
         {/* Main Column */}
         <section className="agent-main-col">
+
+          {/* Assigned Service Banner — multi mode only */}
+          {isMulti && assignedService && assignedCategory && (
+            <AssignedServiceBanner service={assignedService} category={assignedCategory} />
+          )}
+
+          {/* Warning: multi mode but agent has no assignment yet */}
+          {isMulti && !assignedService && (
+            <div className="agent-unassigned-warning">
+              <span className="agent-unassigned-icon">⚠</span>
+              <div className="agent-unassigned-text">
+                <strong>لم يتم تخصيص خدمة لهذا الشباك بعد.</strong>
+                <span>يرجى مراجعة المدير لتعيين الخدمة المناسبة.</span>
+              </div>
+            </div>
+          )}
+
           {/* Current Ticket Card */}
           <div className="agent-current-card">
             <div className="agent-current-card-header">
               <div className="agent-pulse-ring" />
               <span className="agent-current-label">التذكرة الحالية</span>
+              {current && !isMulti && (
+                <span
+                  className="current-cat-chip"
+                  style={{
+                    background: CATEGORY_COLOR[getCategoryForService(current.service)].bg,
+                    color:      CATEGORY_COLOR[getCategoryForService(current.service)].text,
+                    border:    `1px solid ${CATEGORY_COLOR[getCategoryForService(current.service)].border}`,
+                  }}
+                >
+                  {CATEGORY_LABEL[getCategoryForService(current.service)]}
+                </span>
+              )}
             </div>
 
             {current ? (
@@ -274,9 +451,8 @@ export default function AgentPage() {
             )}
           </div>
 
-          {/* FIXED ACTION BUTTONS */}
+          {/* Action Buttons */}
           <div className="agent-actions-grid">
-            {/* Yellow - Left */}
             <button
               onClick={togglePause}
               className={`agent-action-btn ${isPaused ? "agent-btn-resume" : "agent-btn-pause"}`}
@@ -285,7 +461,6 @@ export default function AgentPage() {
               {isPaused ? "استئناف الخدمة" : "إيقاف مؤقت"}
             </button>
 
-            {/* Blue - Middle (wide) */}
             <button
               onClick={callNext}
               disabled={isPaused || waiting.length === 0}
@@ -297,7 +472,6 @@ export default function AgentPage() {
               {waiting[0] && <span className="agent-btn-sub">{waiting[0].number}</span>}
             </button>
 
-            {/* Red - Right */}
             <button
               onClick={skipCurrent}
               disabled={!current}
@@ -309,20 +483,17 @@ export default function AgentPage() {
             </button>
           </div>
 
-          {/* Recall button (placed below for now - clean look) */}
           <button
             onClick={recallCurrent}
             disabled={!current}
             className="agent-action-btn agent-btn-secondary"
             style={{ marginTop: "12px", opacity: current ? 1 : 0.4 }}
           >
-            <span className="agent-btn-icon">
-              <AiFillSound />
-            </span>
+            <span className="agent-btn-icon"><AiFillSound /></span>
             إعادة الاستدعاء
           </button>
 
-          {/* Done / Skipped Log */}
+          {/* Done Log */}
           {done.length > 0 && (
             <div className="agent-done-panel">
               <span className="agent-panel-title">السجل الأخير</span>
