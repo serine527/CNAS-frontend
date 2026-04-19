@@ -139,7 +139,7 @@ export default function GetTicket() {
 
             {/* Hero ticket banner */}
             <div className={styles.ticketHero}>
-              <div className={styles.heroGlow} />
+              
               <div className={styles.heroTop}>
                 <div className={styles.activePill}>
                   <span className={styles.activeDot} />

@@ -9,7 +9,7 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
       <p>الخدمة: {ticket.service}</p>
       <p>التفصيل: {ticket.subService}</p>
       <p>أولوية: {ticket.priority ? "نعم" : "لا"}</p>
-      <p>مدة الانتظار: {ticket.wait}</p>
+     <p>مدة الانتظار: {ticket.waitMinutes} دقيقة</p>
     </div>
   );
 }

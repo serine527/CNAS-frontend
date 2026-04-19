@@ -11,7 +11,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 40px;
+  padding: 15px 10px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: sticky;
@@ -30,6 +30,7 @@
   gap: 25px;
   font-weight: 500;
   cursor: pointer;
+  margin-left: 220px;
 }
 
 .loginButton {
@@ -57,7 +58,7 @@
 .overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7));
+  background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.6));
 }
 
 .heroContent {

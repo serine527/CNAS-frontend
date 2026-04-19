@@ -11,8 +11,17 @@
 }
 
 .header {
-  text-align: center;
-  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 35px;
+}
+
+.header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .header img {
@@ -166,16 +175,6 @@
   color: white;
 }
 
-.heroGlow {
-  position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
-  pointer-events: none;
-}
 
 .heroTop {
   display: flex;
@@ -315,14 +314,14 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-
-.statCard {
+.card {
+  max-width: 640px;
+  margin: auto;
   background: #ffffff;
-  border: 1px solid #eaecf0;
-  border-radius: 16px;
-  padding: 18px 16px 16px;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
-  direction: rtl;
+  padding: 32px;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06);
+  border: 1px solid #eef2f7;
 }
 
 .statTop {

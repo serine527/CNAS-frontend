@@ -48,11 +48,9 @@ export function getCategoryForService(service: string): ServiceCategory {
 
 // ─── Default agents ───────────────────────────────────────────────────────────
 const defaultAgents: Agent[] = [
-  { id: 1, name: "أحمد محمد",  category: null, assignedService: null },
-  { id: 2, name: "سارة علي",   category: null, assignedService: null },
-  { id: 3, name: "خالد حسن",   category: null, assignedService: null },
-  { id: 4, name: "نور الدين",  category: null, assignedService: null },
-  { id: 5, name: "فاطمة زهرة", category: null, assignedService: null },
+  { id: 1, name: "Agent 1", category: null, assignedService: null },
+  { id: 2, name: "Agent 2", category: null, assignedService: null },
+  { id: 3, name: "Agent 3", category: null, assignedService: null },
 ];
 
 const defaultConfig: SystemConfig = {

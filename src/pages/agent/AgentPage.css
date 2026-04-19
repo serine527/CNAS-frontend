@@ -16,7 +16,7 @@
 
   position: relative;
 
-  overflow: hidden;
+  
 
 }
 
@@ -186,9 +186,9 @@
 
   font-size: 15px;
 
-  font-weight: 700;
+  font-weight: 400;
 
-  color: #0047ab;
+  color: #000000;
 
   line-height: 1.3;
 
@@ -204,7 +204,7 @@
 
 }
 
-
+/////////////////////////////////////////////////////////
 
 .agent-header-center {
 
@@ -312,11 +312,11 @@
 
 .agent-status-badge.paused {
 
-  background-color: rgba(245, 158, 11, 0.13);
+  background-color: rgba(241, 109, 85, 0.13);
 
-  border-color: #b1740bcb;
+  border-color: #ce1407cb;
 
-  color: #d3b52e;
+  color: #e13131;
 
 }
 
@@ -338,44 +338,33 @@
 
 .agent-status-dot.active  { background-color: #22c55e; }
 
-.agent-status-dot.paused  { background-color: #f59e0b; }
+.agent-status-dot.paused  { background-color: #e93b00; }
 
 
 
 /* ─── Logout Button ───────────────────────────────────────────────────────── */
 
+
+
 .agent-logout-btn {
-
   background: transparent;
-
-  border: 1.5px solid #e2e8f0;
-
-  border-radius: 8px;
-
-  padding: 7px 16px;
-
-  font-size: 13px;
-
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 10px;
   color: #64748b;
-
+  font-size: 13px;
   cursor: pointer;
-
-  font-family: inherit;
-
-  transition: border-color 0.2s, color 0.2s;
-
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: 0.2s;
 }
-
-
 
 .agent-logout-btn:hover {
-
-  border-color: #cbd5e1;
-
-  color: #334155;
-
+  background: #fff1f1;
+  border-color: #fecaca;
+  color: #ef4444;
 }
-
 
 
 /* ─── Main Layout ─────────────────────────────────────────────────────────── */
@@ -518,7 +507,7 @@
 
   font-weight: 700;
 
-  color: #1e293b;
+  color: #2d61b7;
 
 }
 
@@ -1049,32 +1038,45 @@ border: none;
 }
 
 .agent-btn-primary {
-
-  background: linear-gradient(135deg, #0047ab, #0066ff);
-
+  background: #003f99;/* darker blue */
   color: #fff;
 
-  box-shadow: 0 4px 20px rgba(0, 71, 171, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 51, 122, 0.35);
 
   font-size: 18px;
-
   padding: 22px 32px;
-
   grid-column: 2;
+
+  border: none;
+  border-radius: 14px;
+  transition: 0.2s;
 }
 
+.agent-btn-primary:hover {
+  background: #002a66; /* even darker on hover */
+  transform: translateY(-1px);
+}
 
+/*  ///////////////////////////////////////////////*/
 
 .agent-btn-pause {
-
-  background: linear-gradient(135deg, #dd9518d3, #d6ae47);
-
-border: 2px solid rgba(255, 255, 255, .2);
-box-shadow: 0 0 10px rgba(0, 0, 0, .2);
-backdrop-filter: blur(30px);
+  background: #003f99; /* darker blue */
   color: #fff;
- 
+
+
+  border: none;
+  border-radius: 14px;
+
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+
   grid-column: 1;
+
+  transition: 0.2s;
+}
+
+.agent-btn-pause:hover {
+  background: #002a66;
+  transform: translateY(-1px);
 }
 
 
@@ -1195,15 +1197,15 @@ backdrop-filter: blur(30px);
 }
 
 .mode-badge--single {
-  background: rgba(139, 92, 246, 0.10);
-  border-color: #8b5cf6;
-  color: #7c3aed;
+  background: rgba(66, 113, 254, 0.1);
+  border-color: #5a66b3;
+  color: #596fc7;
 }
 
 .mode-badge--multi {
-  background: rgba(0, 71, 171, 0.10);
-  border-color: #0047ab;
-  color: #0047ab;
+  background: rgba(66, 113, 254, 0.1);
+  border-color: #5a66b3;
+  color: #596fc7;
 }
 
 .mode-badge__dot {
@@ -1215,7 +1217,7 @@ backdrop-filter: blur(30px);
 }
 
 .mode-badge__icon {
-  font-size: 15px;
+  font-size: 0px;
 }
 
 .mode-badge__label {
@@ -1371,6 +1373,7 @@ backdrop-filter: blur(30px);
   border: 1px solid;
   margin-right: auto;
 }
+/*//////////////////////////////////////////////////////*/
 .agent-unassigned-warning {
   display: flex;
   align-items: center;
@@ -1402,4 +1405,478 @@ backdrop-filter: blur(30px);
 .agent-unassigned-text span {
   font-size: 12px;
   color: #b45309;
+}
+/* PROFILE BUTTON  ////////////////////////////////*/
+.agent-profile-btn {
+  background: #0047ab;
+  color: white;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* MODAL */
+.profile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.profile-modal {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-section input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.save-btn {
+  background: green;
+  color: white;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+}
+
+.close-btn {
+  background: red;
+  color: white;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+}
+/* ─── Profile Button ───────────────────────────── */
+.agent-profile-btn {
+  background:  #3d8ef0;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ─── Modal Overlay ───────────────────────────── */
+.profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+/* ─── Modal Box ───────────────────────────── */
+.profile-modal {
+  background: white;
+  width: 420px;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+/* ─── Inputs ───────────────────────────── */
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.profile-section input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+/* ─── Buttons ───────────────────────────── */
+.save-btn {
+  background: #22c55e;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.close-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.agent-profile-btn {
+  background: #0047ab;
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+.agent-profile-btn:hover {
+  transform: scale(1.05);
+}
+
+
+/* ─── Drawer Panel ───────────────────────── */
+.agent-drawer {
+  width: 280px;
+  height: calc(100vh - 70px);
+  background: #ffffff;
+
+  position: fixed;
+  top: 70px;
+  right: 0;
+
+  /* ✨ ADD THIS */
+  border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -6px 0 20px rgba(0,0,0,0.08);
+
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 90;
+  
+  background: #ffffff;
+  backdrop-filter: blur(10px); /* subtle modern feel */
+}
+
+
+.agent-drawer.open {
+  transform: translateX(0);
+}
+
+
+/* ─── Header ───────────────────────── */
+.agent-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.agent-drawer-header span {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.agent-drawer-header button {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* ─── Content ───────────────────────── */
+.agent-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Items updated one*/
+.drawer-item {
+  background: transparent;
+  border: none;
+  text-align: right;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.drawer-item:hover {
+  background: #f1f5f9;
+}
+
+/* Divider */
+.drawer-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 10px 0;
+}
+
+/* Logout */
+.drawer-item.logout {
+  color: #ef4444;
+}
+
+.drawer-item.logout:hover {
+  background: #fee2e2;
+}
+/* ─── Drawer User Section ───────────────────────── */
+
+.drawer-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drawer-avatar {
+  width: 40px;
+  height: 40px;
+  background: #0047ab;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.drawer-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.drawer-role {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Improve item layout */
+
+
+.drawer-item svg {
+  font-size: 18px;
+}
+/* wrapper for page */
+.agent-content {
+  transition: margin 0.3s ease;
+}
+
+.agent-content {
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+/* When menu is open */
+.menu-open .agent-content {
+  width: calc(100% - 320px);
+  margin-right: 320px;
+}
+.agent-header {
+  z-index: 1000;
+  position: sticky;
+  top: 0;
+}
+.agent-menu-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+   color: #c0c0c0f5; 
+  cursor: pointer;
+}
+.drawer-submenu {
+  display: flex;
+  flex-direction: column;
+  margin-left: 20px;
+  margin-top: 5px;
+  gap: 6px;
+}
+
+.drawer-subitem {
+  background: transparent;
+  border: none;
+  text-align: right;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.drawer-subitem:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.profile-page {
+  min-height: 100vh;
+  width: 100%;
+
+  display: block; /* 👈 IMPORTANT: remove flex completely */
+
+  background: #f5f7fb;
+  padding: 40px;
+  direction: rtl;
+}
+
+
+.profile-page h2 {
+  margin-bottom: 25px;
+  font-size: 28px;
+  color: #00337a;
+}
+.profile-card {
+  width: 100%;
+  max-width: none;   /* 👈 remove limitation */
+  
+  background: white;
+  border-radius: 18px;
+  padding: 40px;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-card p {
+  display: flex;
+ 
+  align-items: center;            /* clean vertical alignment */
+
+  background: #f8fafc;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border-right: 4px solid #00337a;
+
+  font-size: 15px;
+  color: #333;
+}
+.profile-card p strong {
+  color: #00337a;
+}
+.profile-back-btn {
+  margin-top: 25px;
+  padding: 10px 18px;
+  background: #00337a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.profile-back-btn:hover {
+  background: #0047ab;
+  transform: translateY(-2px);
+}
+@media (max-width: 768px) {
+  .profile-card {
+    grid-template-columns: 1fr;
+    padding: 25px;
+  }
+}
+.profile-input {
+  border: none;
+  background: transparent;
+  border-bottom: 1px solid #ccc;
+  padding: 4px 8px;
+  font-size: 14px;
+  width: 50%;
+  text-align: right;
+  
+}
+
+
+.profile-input:focus {
+  outline: none;
+  border-bottom: 1px solid #0047ab;
+}
+.save-btn {
+  margin-top: 20px;
+  padding: 10px 18px;
+  background: #00337a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background: #0047ab;
+}
+
+.close-btn {
+  padding: 10px 18px;
+  background: #e5e7eb;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.agent-content {
+  flex: 1;
+  transition: all 0.3s ease;
+  min-width: 0;
+}
+
+/* when menu is open, shrink page */
+
+
+/* drawer becomes part of layout (not overlay) */
+.agent-drawer {
+  width: 320px;
+  flex-shrink: 0;
+  height: calc(100vh - 70px);
+  background: white;
+
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -6px 0 20px rgba(0,0,0,0.08);
+
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 90;
+}
+
+/* open state */
+.agent-drawer.open {
+  transform: translateX(0);
+}
+.agent-layout {
+  display: flex;
+  width: 100%;
+  transition: all 0.3s ease;
 }

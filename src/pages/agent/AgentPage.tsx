@@ -1,18 +1,24 @@
 // src/pages/AgentPage.tsx
-
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import {
   useSystem,
   allServices,
   getCategoryForService,
   type ServiceCategory,
-} from "../context/SystemContext";
-import CNASLogo from "../assets/CNAS_logo.png";
+} from "../../context/SystemContext";
+import CNASLogo from "../../assets/CNAS_logo.png";
 import { AiFillSound } from "react-icons/ai";
 import "./AgentPage.css";
-
+import { FaSignOutAlt } from "react-icons/fa";
+import {
+  FiUser,
+  FiLock,
+  FiLogOut,
+  FiMenu,
+  FiX,
+} from "react-icons/fi";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TicketStatus = "waiting" | "serving" | "paused" | "done" | "skipped";
 
@@ -85,7 +91,7 @@ const playDing = () => {
   }
 };
 
-// ─── Clock ────────────────────────────────────────────────────────────────────
+/*     ////////////////////////////////////////////////////
 function Clock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -95,7 +101,7 @@ function Clock() {
   return (
     <>{time.toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</>
   );
-}
+}  */
 
 // ─── Mode Badge (header button showing current mode) ─────────────────────────
 function ModeBadge({ isMulti, assignedService, category }: {
@@ -192,12 +198,46 @@ export default function AgentPage() {
   const [servedToday, setServedToday] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
 
+// ─── Profile Modal State ─────────────────────────────
+const [showProfile, setShowProfile] = useState(false);
+const [showMenu, setShowMenu] = useState(false);
+const [profileMenu, setProfileMenu] = useState(false);
+const [view, setView] = useState<"dashboard" | "profile" | "password">("dashboard");
+
+const [profileData, setProfileData] = useState({
+  name: "",
+  lastName: "",
+  username: username || "",
+  guichet: "",
+  service: assignedService || "",
+  sousService: assignedCategory || "",
+  password: "",
+});
+
+const [passwordData, setPasswordData] = useState({
+  current: "",
+  new: "",
+  confirm: "",
+});
+
+const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+
   // Re-generate queue whenever mode or assigned service changes
   useEffect(() => {
     setQueue(generateQueue(isMulti ? assignedService : undefined));
     setServedToday(0);
     setIsPaused(false);
   }, [isMulti, assignedService]);
+
+  useEffect(() => {
+  if (agentRecord) {
+    setProfileData((prev) => ({
+      ...prev,
+      name: agentRecord.name || "",
+      lastName: agentRecord.lastName || "",
+    }));
+  }
+}, [agentRecord]);
 
   const current = queue.find((t) => t.status === "serving") ?? null;
   const waiting = queue.filter((t) => t.status === "waiting");
@@ -256,7 +296,8 @@ export default function AgentPage() {
   ];
 
   return (
-    <div className="agent-root">
+    <div className={`agent-root ${showMenu ? "menu-open" : ""}`}>
+      <div className="agent-layout"></div>
       <div className="agent-bg-circle-1" />
       <div className="agent-bg-circle-2" />
 
@@ -268,6 +309,7 @@ export default function AgentPage() {
       )}
 
       {/* ── HEADER ── */}
+       
       <header className="agent-header">
         <div className="agent-header-left">
           <img src={CNASLogo} alt="CNAS" className="agent-header-logo" />
@@ -277,7 +319,7 @@ export default function AgentPage() {
           </div>
         </div>
 
-        <div className="agent-header-center">
+       {/* <div className="agent-header-center">
           <div className="agent-clock-box">
             <Clock />
             <span className="agent-clock-date">
@@ -289,30 +331,46 @@ export default function AgentPage() {
               })}
             </span>
           </div>
-        </div>
+        </div>*/}
 
-        <div className="agent-header-right">
-          {/* Mode Badge */}
-          <ModeBadge
-            isMulti={isMulti}
-            assignedService={assignedService}
-            category={assignedCategory}
-          />
+       <div className="agent-header-right">
+  <ModeBadge
+    isMulti={isMulti}
+    assignedService={assignedService}
+    category={assignedCategory}
+  />
 
-          <div className={`agent-status-badge ${isPaused ? "paused" : "active"}`}>
-            <div className={`agent-status-dot ${isPaused ? "paused" : "active"}`} />
-            {isPaused ? "موقوف" : "نشط"}
-          </div>
-          <button onClick={handleLogout} className="agent-logout-btn">
-            تسجيل الخروج
-          </button>
-        </div>
-      </header>
+  <div className={`agent-status-badge ${isPaused ? "paused" : "active"}`}>
+    <div className={`agent-status-dot ${isPaused ? "paused" : "active"}`} />
+    {isPaused ? "موقوف" : "نشط"}
+  </div>
 
-      {/* ── MAIN ── */}
-      <main className="agent-main">
-        {/* Sidebar */}
-        <aside className="agent-sidebar">
+  {/* ✅ MENU BUTTON HERE */}
+  <div className="agent-menu-wrapper">
+    <button
+      className="agent-menu-btn"
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowMenu((prev) => !prev);
+      }}
+    >
+      <FiMenu />
+    </button>
+  </div>
+
+  <button onClick={handleLogout} className="agent-logout-btn">
+    <FaSignOutAlt /> تسجيل الخروج
+  </button>
+ </div>
+         </header>
+
+           {/* ── MAIN ── */}
+          <div className="agent-content">
+          <main className="agent-main">
+             {view === "dashboard" && (
+    <>
+             {/* Sidebar */}
+           <aside className="agent-sidebar">
           <div className="agent-stats-row">
             {statCards.map((s) => (
               <div key={s.label} className="agent-stat-card" style={{ borderTop: `3px solid ${s.color}` }}>
@@ -377,11 +435,15 @@ export default function AgentPage() {
                     >
                       {STATUS_LABEL[ticket.status]}
                     </span>
+                    
                   </div>
                 );
               })}
+              
             </div>
+            
           </div>
+          
         </aside>
 
         {/* Main Column */}
@@ -519,7 +581,272 @@ export default function AgentPage() {
             </div>
           )}
         </section>
+        </>
+  )}
+
+  {view === "profile" && (
+
+   
+
+    <div className="profile-page">
+
+     
+
+      <div className="profile-card">
+
+         <h2>الملف الشخصي</h2>
+        <p><strong>اسم المستخدم:</strong> {username}</p>
+
+       <p>
+   <strong>الاسم:</strong>
+   <input
+    className="profile-input"
+    value={profileData.name}
+    onChange={(e) =>
+      setProfileData({ ...profileData, name: e.target.value })
+    }
+   />
+   </p>
+
+   <p>
+    <strong>اللقب:</strong>
+    <input
+    className="profile-input"
+    value={profileData.lastName}
+    onChange={(e) =>
+      setProfileData({ ...profileData, lastName: e.target.value })
+    }
+   />
+   </p>
+
+        <p><strong>الهيكل:</strong> {agentRecord?.structure || "-"}</p>
+
+        <p><strong>الشباك / الطابور:</strong> {agentRecord?.queue || "-"}</p>
+
+        <p><strong>الخدمة:</strong> {assignedService || "-"}</p>
+
+        {isMulti && (
+          <>
+            <p>
+              <strong>التصنيف:</strong>{" "}
+              {assignedCategory === "medical"
+                ? "الخدمات الطبية"
+                : assignedCategory === "prestation"
+                ? "خدمات الاستحقاقات"
+                : "-"}
+            </p>
+
+            <p>
+              <strong>الخدمة الفرعية:</strong>{" "}
+              {agentRecord?.subService || "-"}
+            </p>
+          </>
+        )}
+      </div>
+    
+    </div>
+   )}
+
+  
       </main>
+    </div>
+     {/* ─── PROFILE MODAL ───────────────────────────── */}
+     {showProfile && (
+     <div className="profile-modal-overlay">
+       <div className="profile-modal">
+
+      <h3>Profile</h3>
+
+      <div className="profile-section">
+        <label>Name</label>
+        <input
+          value={profileData.name}
+          onChange={(e) =>
+            setProfileData({ ...profileData, name: e.target.value })
+          }
+        />
+      </div>
+
+      <div className="profile-section">
+        <label>Last Name</label>
+        <input
+          value={profileData.lastName}
+          onChange={(e) =>
+            setProfileData({ ...profileData, lastName: e.target.value })
+          }
+        />
+      </div>
+
+      <div className="profile-section">
+        <label>Username</label>
+        <input value={profileData.username} disabled />
+      </div>
+
+      <div className="profile-section">
+        <label>Guichet</label>
+        <input value={profileData.guichet} disabled />
+      </div>
+
+      <div className="profile-section">
+        <label>Service</label>
+        <input value={profileData.service} disabled />
+      </div>
+
+      <div className="profile-section">
+        <label>Sous Service</label>
+        <input value={profileData.sousService} disabled />
+      </div>
+
+      <div className="profile-section">
+        <label>Mot de passe</label>
+        <input
+          type="password"
+          value={profileData.password}
+          onChange={(e) =>
+            setProfileData({ ...profileData, password: e.target.value })
+          }
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="save-btn" onClick={() => setShowProfile(false)}>
+          Save
+        </button>
+
+        <button className="close-btn" onClick={() => setShowProfile(false)}>
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+{view === "password" && (
+  <div className="profile-page">
+    <div className="profile-card">
+
+      <h2>تغيير كلمة المرور</h2>
+
+      <p>
+        <strong>كلمة المرور الحالية:</strong>
+        <input
+          type="password"
+          className="profile-input"
+          value={passwordData.current}
+          onChange={(e) =>
+            setPasswordData({ ...passwordData, current: e.target.value })
+          }
+        />
+      </p>
+
+      <p>
+        <strong>كلمة المرور الجديدة:</strong>
+        <input
+          type="password"
+          className="profile-input"
+          value={passwordData.new}
+          onChange={(e) =>
+            setPasswordData({ ...passwordData, new: e.target.value })
+          }
+        />
+      </p>
+
+      <p>
+        <strong>تأكيد كلمة المرور:</strong>
+        <input
+          type="password"
+          className="profile-input"
+          value={passwordData.confirm}
+          onChange={(e) =>
+            setPasswordData({ ...passwordData, confirm: e.target.value })
+          }
+        />
+      </p>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button className="save-btn" onClick={() => setShowConfirmPopup(true)}>
+          حفظ
+        </button>
+
+        <button className="close-btn" onClick={() => setView("dashboard")}>
+          إلغاء
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+ <div className={`agent-drawer ${showMenu ? "open" : ""}`}>
+  
+  <div className="agent-drawer-header">
+    <div className="drawer-user">
+      <div className="drawer-avatar">
+        {username ? username.charAt(0).toUpperCase() : "A"}
+      </div>
+      <div>
+        <div className="drawer-name">{username}</div>
+        <div className="drawer-role">Agent CNAS</div>
+      </div>
+    </div>
+
+    <button onClick={() => setShowMenu(false)}>✕</button>
+  </div>
+
+  <div className="agent-drawer-content">
+    <button
+  className="drawer-item"
+  onClick={() => setProfileMenu((p) => !p)}
+ >
+  <FiUser /> الملف الشخصي
+ </button>
+ {profileMenu && (
+  <div className="drawer-submenu">
+    
+    {/* Profile view */}
+    <button
+      className="drawer-subitem"
+      onClick={() => {
+        setView("profile");
+        setProfileMenu(false);
+      }}
+    >
+      عرض الملف الشخصي
+    </button>
+
+    {/* Password view */}
+    <button
+      className="drawer-subitem"
+      onClick={() => {
+        setView("password");
+        setProfileMenu(false);
+      }}
+    >
+      تغيير كلمة المرور
+    </button>
+
+  </div>
+)}
+
+<button
+  className="drawer-item"
+  onClick={() => {
+    setView("dashboard");
+    setShowMenu(false);
+  }}
+>
+   ⬅ العودة إلى الرئيسية
+</button>
+
+    <button
+      className="drawer-item logout"
+      onClick={handleLogout}
+    >
+      <FaSignOutAlt /> تسجيل الخروج
+    </button>
+  </div>
+
+</div>
+
     </div>
   );
 }

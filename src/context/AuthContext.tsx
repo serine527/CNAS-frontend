@@ -1,45 +1,60 @@
-// src/context/AuthContext.tsx
-import { createContext, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useState, ReactNode } from "react";
+import { loginUser } from "../api/auth";
 
-export type Role = "agent" | "admin" | "beneficiary";
-
-interface AuthContextType {
+// ✅ Define User type
+type User = {
   username: string;
-  role: Role | null;
-  agentId: number | null; // set on login for agents, null for admin/beneficiary
-  login: (username: string, password: string, role: Role, agentId?: number) => void;
+  role: "admin" | "agent";
+  agentId?: number | null;
+};
+
+// ✅ Define Context type
+type AuthContextType = {
+  user: User | null;
+  login: (username: string, password: string) => Promise<any>;
   logout: () => void;
-}
+};
 
-export const AuthContext = createContext<AuthContextType>({
-  username: "",
-  role: null,
-  agentId: null,
-  login: () => {},
-  logout: () => {},
-});
+// ✅ Create context with proper typing
+export const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [username, setUsername] = useState<string>("");
-  const [role, setRole]         = useState<Role | null>(null);
-  const [agentId, setAgentId]   = useState<number | null>(null);
+// ✅ Props type
+type Props = {
+  children: ReactNode;
+};
 
-  const login = (u: string, _password: string, r: Role, id?: number) => {
-    setUsername(u);
-    setRole(r);
-    setAgentId(id ?? null);
-  };
+export function AuthProvider({ children }: Props) {
+  const [user, setUser] = useState<User | null>(null);
+
+ const login = async (username: string, password: string) => {
+  try {
+    const data = await loginUser(username, password);
+
+    localStorage.setItem("token", data.access_token);
+
+    const userData: User = {
+      username: data.username,
+      role: data.role,
+      agentId: data.agent_id,
+    };
+
+    setUser(userData);
+
+    return data;
+
+  } catch (err: any) {
+    throw new Error(err.message || "Login failed");
+  }
+};
 
   const logout = () => {
-    setUsername("");
-    setRole(null);
-    setAgentId(null);
+    localStorage.removeItem("token");
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ username, role, agentId, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
