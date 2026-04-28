@@ -1,36 +1,94 @@
-// src/context/QueueContext.tsx
+//src\context\AuthContext.tsx
 import { createContext, useState, ReactNode } from "react";
+import { createTicket, getQueue } from "../api/tickets";
 
+// =========================
+// 🎟️ TYPES (match backend)
+// =========================
 interface Ticket {
-  number: number;
-  service: string;
+  id: number;
+  number: string;
+  category: string;
+  sub_service: string;
+  priority: boolean;
+  status: string;
 }
 
 interface QueueContextType {
   tickets: Ticket[];
-  addTicket: (ticket: Omit<Ticket, "number">) => Ticket;
+  loading: boolean;
+  addTicket: (ticket: {
+    category: string;
+    sub_service: string;
+    priority: boolean;
+  }) => Promise<Ticket>;
+  loadQueue: (agentId: number) => Promise<void>;
 }
 
+// =========================
+// 🧠 CONTEXT
+// =========================
 export const QueueContext = createContext<QueueContextType>({
   tickets: [],
-  addTicket: () => ({ number: 0, service: "" }),
+  loading: false,
+  addTicket: async () => {
+    throw new Error("QueueContext not initialized");
+  },
+  loadQueue: async () => {},
 });
 
-interface QueueProviderProps {
-  children: ReactNode;
-}
-
-export const QueueProvider = ({ children }: QueueProviderProps) => {
+// =========================
+// 📦 PROVIDER
+// =========================
+export const QueueProvider = ({ children }: { children: ReactNode }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const addTicket = (ticket: Omit<Ticket, "number">) => {
-    const newTicket = { number: tickets.length + 1, ...ticket };
-    setTickets([...tickets, newTicket]);
-    return newTicket;
+  // 🎟️ CREATE TICKET
+  const addTicket = async (ticket: {
+    category: string;
+    sub_service: string;
+    priority: boolean;
+  }): Promise<Ticket> => {
+    setLoading(true);
+
+    try {
+      const newTicket = await createTicket(ticket);
+
+      setTickets((prev) => [...prev, newTicket]);
+
+      return newTicket;
+    } catch (err) {
+      console.error("Error creating ticket:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 📋 LOAD QUEUE
+  const loadQueue = async (agentId: number) => {
+    setLoading(true);
+
+    try {
+      const data = await getQueue(agentId);
+      setTickets(data);
+    } catch (err) {
+      console.error("Error loading queue:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <QueueContext.Provider value={{ tickets, addTicket }}>
+    <QueueContext.Provider
+      value={{
+        tickets,
+        loading,
+        addTicket,
+        loadQueue,
+      }}
+    >
       {children}
     </QueueContext.Provider>
   );

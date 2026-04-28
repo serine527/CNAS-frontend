@@ -1,5 +1,7 @@
+//src\context\AuthContext.tsx
 import { createContext, useState, ReactNode } from "react";
 import { loginUser } from "../api/auth";
+import { useEffect } from "react";
 
 // ✅ Define User type
 type User = {
@@ -24,6 +26,13 @@ type Props = {
 };
 
 export function AuthProvider({ children }: Props) {
+  useEffect(() => {
+  const storedUser = localStorage.getItem("user");
+
+  if (storedUser) {
+    setUser(JSON.parse(storedUser));
+  }
+ }, []);
   const [user, setUser] = useState<User | null>(null);
 
  const login = async (username: string, password: string) => {
@@ -38,8 +47,10 @@ export function AuthProvider({ children }: Props) {
       agentId: data.agent_id,
     };
 
-    setUser(userData);
 
+    
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
     return data;
 
   } catch (err: any) {
@@ -47,10 +58,11 @@ export function AuthProvider({ children }: Props) {
   }
 };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-  };
+ const logout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user"); // 🔥 ADD THIS
+  setUser(null);
+};
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>

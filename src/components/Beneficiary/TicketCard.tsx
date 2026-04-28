@@ -1,3 +1,4 @@
+//src\components\Beneficiary\TicketCard.tsx
 import { Ticket } from "../types/Ticket";
 import "./TicketCard.css";
 

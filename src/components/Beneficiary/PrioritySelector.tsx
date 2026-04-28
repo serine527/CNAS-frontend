@@ -1,3 +1,4 @@
+//src\components\Beneficiary\PrioritySelector.tsx
 type Props = {
   priority: boolean;
   setPriority: (value: boolean) => void;

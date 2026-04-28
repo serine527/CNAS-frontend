@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import styles from "./GetTicket.module.css";
 import CNASLogo from "../../assets/CNAS_logo.png";
+import { createTicket } from "../../api/tickets";
 
 export default function GetTicket() {
   const [service, setService] = useState<"prestation" | "medical" | "">("");
@@ -33,43 +34,54 @@ export default function GetTicket() {
     "طلبات أخرى مرتبطة بالمتابعة الطبية"
   ];
 
-  const generateTicketNumber = () => {
-    const letter = service === "prestation" ? "A" : "B";
-    const number = Math.floor(Math.random() * 99) + 1;
-    return `${letter}${number}`;
-  };
+ 
+  const handleTakeTicket = async () => {
+  if (!service || !subService) {
+    alert("يرجى اختيار الخدمة والخدمة الفرعية");
+    return;
+  }
 
-  const handleTakeTicket = () => {
-    if (!service || !subService) {
-      alert("يرجى اختيار الخدمة والخدمة الفرعية");
-      return;
-    }
-
-    const newTicket = generateTicketNumber();
-    const letter = service === "prestation" ? "A" : "B";
-    const fakeQueue = Array.from({ length: 5 }, () => {
-      return `${letter}${Math.floor(Math.random() * 99) + 1}`;
+  try {
+    const newTicket = await createTicket({
+      category: service,
+      sub_service: subService,
+      priority,
     });
-    const fullQueue = [...fakeQueue, newTicket];
 
-    setTicketNumber(newTicket);
-    setQueue(fullQueue);
-    setCurrentTicket(fullQueue[0]);
+    setTicketNumber(newTicket.number);
+
+    // optional: you can still fetch queue later from backend
+    setQueue([newTicket.number]);
+
+    setCurrentTicket(newTicket.number);
     setTicketTaken(true);
-  };
+
+  } catch (err) {
+    console.error(err);
+    alert("حدث خطأ أثناء إنشاء التذكرة");
+  }
+};
 
   useEffect(() => {
-    if (!ticketTaken) return;
-    const interval = setInterval(() => {
-      setQueue((prev) => {
-        if (prev.length <= 1) return prev;
-        const [, ...rest] = prev;
-        setCurrentTicket(rest[0]);
-        return rest;
-      });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [ticketTaken]);
+  if (!ticketTaken) return;
+
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/tickets/queue/1");
+      const data = await res.json();
+
+      setQueue(data.map((t: any) => t.number));
+
+      if (data.length > 0) {
+        setCurrentTicket(data[0].number);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, [ticketTaken]);
 
   const queuePosition = queue.indexOf(ticketNumber);
   const peopleAhead = queuePosition > 0 ? queuePosition : 0;

@@ -1,3 +1,4 @@
+//src\pages\Beneficiary\QueueStatus.tsx
 import "./QueueStatus.css";
 
 export default function QueueStatus() {

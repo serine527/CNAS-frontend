@@ -1,4 +1,5 @@
 // src/pages/AgentPage.tsx
+import { getQueue, callNextTicket, finishTicket } from "../../api/tickets";
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
@@ -58,18 +59,8 @@ const CATEGORY_COLOR: Record<ServiceCategory, { bg: string; text: string; border
   medical:    { bg: "rgba(22,168,76,0.10)", text: "#16a84c", border: "#16a84c" },
 };
 
-// ─── Mock queue generator ─────────────────────────────────────────────────────
-const generateQueue = (filterService?: string): Ticket[] => {
-  const pool = filterService ? [filterService] : allServices;
-  return Array.from({ length: 12 }, (_, i) => ({
-    id: i + 1,
-    number: `A${String(i + 1).padStart(3, "0")}`,
-    service: pool[i % pool.length],
-    arrivalTime: `${String(8 + Math.floor(i / 2)).padStart(2, "0")}:${i % 2 === 0 ? "00" : "30"}`,
-    status: i === 0 ? "serving" : "waiting",
-    waitMinutes: (i + 1) * 7,
-  }));
-};
+
+
 
 // ─── Audio ────────────────────────────────────────────────────────────────────
 const playDing = () => {
@@ -184,7 +175,18 @@ function AssignedServiceBanner({ service, category }: { service: string; categor
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function AgentPage() {
   const navigate = useNavigate();
-  const { logout, agentId, username } = useContext(AuthContext);
+  const auth = useContext(AuthContext);
+
+if (!auth) throw new Error("AuthContext not initialized");
+
+  const { user, logout } = auth;
+
+  const agentId = user?.agentId;
+  const username = user?.username;
+useEffect(() => {
+  console.log("AUTH DEBUG:", user);
+  console.log("AGENT ID:", agentId);
+}, [user]);
   const { isMulti, getAgent } = useSystem();
 
   // Resolve this agent's assignment from the agents roster in SystemContext
@@ -193,11 +195,47 @@ export default function AgentPage() {
   const assignedCategory = isMulti && assignedService ? getCategoryForService(assignedService) : undefined;
 
   // Queue is filtered to assigned service in multi mode, otherwise all services
-  const [queue, setQueue] = useState<Ticket[]>(() => generateQueue(assignedService));
+  const [queue, setQueue] = useState<Ticket[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const [servedToday, setServedToday] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
+  
+  const loadQueue = async () => {
+  if (!agentId) {
+    console.warn("Missing agentId");
+    return;
+  }
 
+  try {
+    const data = await getQueue(agentId);
+
+    if (!Array.isArray(data)) {
+      setQueue([]);
+      return;
+    }
+
+    const formatted = data.map((t: any) => ({
+      id: t.id,
+      number: t.number,
+      service: t.sub_service,
+      arrivalTime: t.created_at
+        ? new Date(t.created_at).toLocaleTimeString("ar-DZ", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "--:--",
+      status: t.status,
+      waitMinutes: t.waitMinutes ?? 0,
+      category: t.category,
+    }));
+
+    setQueue(formatted);
+
+  } catch (err) {
+    console.error("Queue error:", err);
+    setQueue([]); // IMPORTANT: prevent UI freeze
+  }
+};
 // ─── Profile Modal State ─────────────────────────────
 const [showProfile, setShowProfile] = useState(false);
 const [showMenu, setShowMenu] = useState(false);
@@ -222,12 +260,7 @@ const [passwordData, setPasswordData] = useState({
 
 const [showConfirmPopup, setShowConfirmPopup] = useState(false);
 
-  // Re-generate queue whenever mode or assigned service changes
-  useEffect(() => {
-    setQueue(generateQueue(isMulti ? assignedService : undefined));
-    setServedToday(0);
-    setIsPaused(false);
-  }, [isMulti, assignedService]);
+  
 
   useEffect(() => {
   if (agentRecord) {
@@ -239,8 +272,25 @@ const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   }
 }, [agentRecord]);
 
-  const current = queue.find((t) => t.status === "serving") ?? null;
-  const waiting = queue.filter((t) => t.status === "waiting");
+ useEffect(() => {
+  if (!agentId) return;
+
+  const fetch = async () => {
+    await loadQueue();
+  };
+
+  fetch();
+}, [agentId]);
+
+useEffect(() => {
+  console.log("agentId:", agentId);
+}, [agentId]);
+
+  const current =
+  queue.find(t => t.status === "serving") ||
+  queue[0] ||
+  null;
+  const waiting = queue.filter(t => t.status === "waiting");
   const done    = queue.filter((t) => t.status === "done" || t.status === "skipped");
 
   const notify = (msg: string) => {
@@ -248,20 +298,18 @@ const [showConfirmPopup, setShowConfirmPopup] = useState(false);
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const callNext = () => {
-    if (isPaused) return notify("الخدمة موقوفة. يرجى رفع الإيقاف أولاً.");
-    const nextWaiting = queue.find((t) => t.status === "waiting");
-    if (!nextWaiting) return notify("لا توجد تذاكر في الانتظار.");
-    setQueue((prev) =>
-      prev.map((t) => {
-        if (t.status === "serving") return { ...t, status: "done" };
-        if (t.id === nextWaiting.id) return { ...t, status: "serving" };
-        return t;
-      })
-    );
-    if (current) setServedToday((n) => n + 1);
-    notify(`تم استدعاء التذكرة ${nextWaiting.number}`);
-  };
+ const callNext = async () => {
+  if (!agentId) return;
+
+  try {
+    await callNextTicket(agentId);
+    await loadQueue();
+    notify("تم استدعاء التذكرة التالية");
+  } catch (err) {
+    console.error(err);
+    notify("خطأ في استدعاء التذكرة");
+  }
+};
 
   const togglePause = () => {
     setIsPaused((p) => {
@@ -270,13 +318,17 @@ const [showConfirmPopup, setShowConfirmPopup] = useState(false);
     });
   };
 
-  const skipCurrent = () => {
-    if (!current) return;
-    setQueue((prev) =>
-      prev.map((t) => (t.id === current.id ? { ...t, status: "skipped" } : t))
-    );
+  const skipCurrent = async () => {
+  if (!current) return;
+
+  try {
+    await finishTicket(current.id);
+    await loadQueue();
     notify(`تم تخطي التذكرة ${current.number}`);
-  };
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   const recallCurrent = () => {
     if (!current) return;
