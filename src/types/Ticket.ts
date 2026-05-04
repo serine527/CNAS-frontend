@@ -14,7 +14,7 @@ export interface Ticket {
   // service
   service: string;
   subService?: string;
-
+  category?: string;
   // time
   arrivalTime: string;
   waitMinutes: number; // ✅ unified name

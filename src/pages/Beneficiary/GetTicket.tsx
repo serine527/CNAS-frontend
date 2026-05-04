@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import styles from "./GetTicket.module.css";
 import CNASLogo from "../../assets/CNAS_logo.png";
 import { createTicket } from "../../api/tickets";
+import { useSystem } from "../../context/SystemContext";
+import { QueueContext } from "../../context/QueueContext";
+import { useContext } from "react";
 
 export default function GetTicket() {
   const [service, setService] = useState<"prestation" | "medical" | "">("");
@@ -11,7 +14,7 @@ export default function GetTicket() {
   const [ticketTaken, setTicketTaken] = useState(false);
 
   const [ticketNumber, setTicketNumber] = useState("");
-  const [queue, setQueue] = useState<string[]>([]);
+  const [queue, setQueue] = useState<any[]>([]);
   const [currentTicket, setCurrentTicket] = useState<string>("");
 
   const prestationServices: string[] = [
@@ -35,59 +38,102 @@ export default function GetTicket() {
   ];
 
  
-  const handleTakeTicket = async () => {
+
+const handleTakeTicket = async () => {
+  console.log("CLICKED", subService);
+
   if (!service || !subService) {
-    alert("يرجى اختيار الخدمة والخدمة الفرعية");
+    alert("اختر الخدمة");
     return;
   }
 
   try {
-    const newTicket = await createTicket({
-      category: service,
-      sub_service: subService,
-      priority,
-    });
+    const services =
+      service === "prestation" ? prestationServices : medicalServices;
+
+    const serviceIndex = services.indexOf(subService);
+
+    if (serviceIndex === -1) {
+      alert("Service not found");
+      return;
+    }
+
+    const service_id =
+      service === "prestation"
+        ? serviceIndex + 1
+        : serviceIndex + 10;
+
+    console.log("SERVICE ID:", service_id);
+
+    // ✅ FIXED LINE (THIS IS THE IMPORTANT FIX)
+  const newTicket = await createTicket({
+  service_id,
+  sub_service: subService,
+  priority: priority,   // 🔥 THIS IS THE FIX
+});
+
+    console.log("TICKET:", newTicket);
+
+    if (!newTicket || !newTicket.number) {
+      throw new Error("Invalid response from backend");
+    }
 
     setTicketNumber(newTicket.number);
-
-    // optional: you can still fetch queue later from backend
     setQueue([newTicket.number]);
-
     setCurrentTicket(newTicket.number);
     setTicketTaken(true);
 
-  } catch (err) {
-    console.error(err);
-    alert("حدث خطأ أثناء إنشاء التذكرة");
+  } catch (err: any) {
+    console.error("ERROR:", err);
+    alert(err.message || "Backend error");
   }
 };
 
-  useEffect(() => {
-  if (!ticketTaken) return;
+
+
+const serviceIndex = (
+  service === "prestation" ? prestationServices : medicalServices
+).indexOf(subService);
+
+const service_id =
+  service === "prestation"
+    ? serviceIndex + 1
+    : serviceIndex + 10;
+
+useEffect(() => {
+  if (!ticketTaken || !service || !ticketNumber || !subService) return;
 
   const interval = setInterval(async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/tickets/queue/1");
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/tickets/queue/${service}/${subService}`
+      );
+
+      if (!res.ok) {
+        console.error("Queue API failed:", res.status);
+        return;
+      }
+
       const data = await res.json();
 
-      setQueue(data.map((t: any) => t.number));
+      setQueue(data);
 
       if (data.length > 0) {
         setCurrentTicket(data[0].number);
       }
+
     } catch (err) {
-      console.error(err);
+      console.error("Queue fetch error:", err);
     }
   }, 3000);
 
   return () => clearInterval(interval);
-}, [ticketTaken]);
-
-  const queuePosition = queue.indexOf(ticketNumber);
+}, [ticketTaken, service, subService, ticketNumber]);
+  const queuePosition = queue.findIndex(t => t.number === ticketNumber);
   const peopleAhead = queuePosition > 0 ? queuePosition : 0;
   const estWait = peopleAhead * 5;
   const serviceLabel = service === "prestation" ? "الاداءات" : "المراقبة الطبية";
-
+  const currentIndex = queue.findIndex(t => t.number === currentTicket);
   return (
     <div className={styles.page}>
       {/* HEADER */}
@@ -137,7 +183,7 @@ export default function GetTicket() {
             )}
 
             <div className={styles.prioritySection}>
-              <input type="checkbox" checked={priority} onChange={() => setPriority(!priority)} />
+              <input type="checkbox" checked={priority} onChange={(e) => setPriority(e.target.checked)} />
               <span>أولوية (إعاقة أو أكثر من 65 سنة)</span>
             </div>
 
@@ -227,32 +273,37 @@ export default function GetTicket() {
               <div className={styles.progressHeader}>
                 <span className={styles.progressTitle}>تقدم قائمة الانتظار</span>
                 <span className={styles.progressCount}>
-                  {queue.indexOf(currentTicket) + 1} / {queue.length}
+                  {queue.findIndex(t => t.number === currentTicket) + 1} / {queue.length}
                 </span>
               </div>
               <div className={styles.progressTrack}>
                 <div
                   className={styles.progressFill}
                   style={{
-                    width: `${Math.max(8, ((queue.indexOf(currentTicket) + 1) / queue.length) * 100)}%`
+                   width: `${Math.max(8, ((currentIndex + 1) / queue.length) * 100)}%`
                   }}
                 />
               </div>
               <div className={styles.queuePills}>
                 {queue.map((t, i) => (
-                  <div
-                    key={i}
-                    className={`${styles.pill} ${
-                      t === currentTicket ? styles.pillCurrent
-                      : t === ticketNumber ? styles.pillMine
-                      : styles.pillWaiting
-                    }`}
-                    title={t === ticketNumber ? "تذكرتك" : t === currentTicket ? "الحالي" : ""}
-                  >
-                    {t}
-                    {t === ticketNumber && <span className={styles.pillYouTag}>أنت</span>}
-                  </div>
-                ))}
+  <div
+    key={i}
+    className={`${styles.pill} ${
+      t.number === currentTicket ? styles.pillCurrent
+      : t.number === ticketNumber ? styles.pillMine
+      : styles.pillWaiting
+    }`}
+  >
+    {t.number}
+
+    {/* ⭐ PRIORITY */}
+    {t.priority && <span style={{ marginLeft: 4 }}>⭐</span>}
+
+    {t.number === ticketNumber && (
+      <span className={styles.pillYouTag}>أنت</span>
+    )}
+  </div>
+))}
               </div>
             </div>
 

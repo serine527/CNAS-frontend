@@ -1,15 +1,15 @@
 // src/context/SystemContext.tsx
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import { getAgents } from "../api/agents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type SystemMode = "single" | "multi";
 export type ServiceCategory = "prestation" | "medical";
 
 export interface Agent {
-  id: number;
+  id: string;
   name: string;
-  // Only meaningful in multi mode — null means not yet assigned
   category: ServiceCategory | null;
   assignedService: string | null;
 }
@@ -46,16 +46,10 @@ export function getCategoryForService(service: string): ServiceCategory {
   return prestationServices.includes(service) ? "prestation" : "medical";
 }
 
-// ─── Default agents ───────────────────────────────────────────────────────────
-const defaultAgents: Agent[] = [
-  { id: 1, name: "Agent 1", category: null, assignedService: null },
-  { id: 2, name: "Agent 2", category: null, assignedService: null },
-  { id: 3, name: "Agent 3", category: null, assignedService: null },
-];
-
+// ─── Default config ───────────────────────────────────────────────────────────
 const defaultConfig: SystemConfig = {
   mode: "single",
-  agents: defaultAgents,
+  agents: [],
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -63,10 +57,10 @@ interface SystemContextValue {
   config: SystemConfig;
   setConfig: (c: SystemConfig) => void;
   isMulti: boolean;
-  getAgent: (agentId: number) => Agent | undefined;
-  updateAgent: (agentId: number, patch: Partial<Agent>) => void;
+  getAgent: (agentId: string) => Agent | undefined;
+  updateAgent: (agentId: string, patch: Partial<Agent>) => void;
   addAgent: (name: string) => Agent;
-  removeAgent: (agentId: number) => void;
+  removeAgent: (agentId: string) => void;
 }
 
 const SystemContext = createContext<SystemContextValue>({
@@ -75,31 +69,72 @@ const SystemContext = createContext<SystemContextValue>({
   isMulti: false,
   getAgent: () => undefined,
   updateAgent: () => {},
-  addAgent: () => ({ id: 0, name: "", category: null, assignedService: null }),
+  addAgent: () => ({
+    id: "",
+    name: "",
+    category: null,
+    assignedService: null,
+  }),
   removeAgent: () => {},
 });
 
+// ─── Provider ────────────────────────────────────────────────────────────────
 export function SystemProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<SystemConfig>(defaultConfig);
 
-  const getAgent = (agentId: number) =>
+  // ── Load agents from backend (seeded DB) ───────────────────────────────────
+  useEffect(() => {
+    const loadAgents = async () => {
+      try {
+        const data = await getAgents();
+
+        setConfig((prev) => ({
+          ...prev,
+          agents: data.map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            category: a.category ?? null,
+            assignedService: a.assigned_service ?? null,
+          })),
+        }));
+      } catch (err) {
+        console.error("Failed to load agents:", err);
+      }
+    };
+
+    loadAgents();
+  }, []);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const getAgent = (agentId: string) =>
     config.agents.find((a) => a.id === agentId);
 
-  const updateAgent = (agentId: number, patch: Partial<Agent>) => {
+  const updateAgent = (agentId: string, patch: Partial<Agent>) => {
     setConfig((prev) => ({
       ...prev,
-      agents: prev.agents.map((a) => (a.id === agentId ? { ...a, ...patch } : a)),
+      agents: prev.agents.map((a) =>
+        a.id === agentId ? { ...a, ...patch } : a
+      ),
     }));
   };
 
   const addAgent = (name: string): Agent => {
-    const newId = Math.max(0, ...config.agents.map((a) => a.id)) + 1;
-    const newAgent: Agent = { id: newId, name, category: null, assignedService: null };
-    setConfig((prev) => ({ ...prev, agents: [...prev.agents, newAgent] }));
+    const newAgent: Agent = {
+      id: crypto.randomUUID(),
+      name,
+      category: null,
+      assignedService: null,
+    };
+
+    setConfig((prev) => ({
+      ...prev,
+      agents: [...prev.agents, newAgent],
+    }));
+
     return newAgent;
   };
 
-  const removeAgent = (agentId: number) => {
+  const removeAgent = (agentId: string) => {
     setConfig((prev) => ({
       ...prev,
       agents: prev.agents.filter((a) => a.id !== agentId),
@@ -108,13 +143,22 @@ export function SystemProvider({ children }: { children: ReactNode }) {
 
   return (
     <SystemContext.Provider
-      value={{ config, setConfig, isMulti: config.mode === "multi", getAgent, updateAgent, addAgent, removeAgent }}
+      value={{
+        config,
+        setConfig,
+        isMulti: config.mode === "multi",
+        getAgent,
+        updateAgent,
+        addAgent,
+        removeAgent,
+      }}
     >
       {children}
     </SystemContext.Provider>
   );
 }
 
+// ─── Hook ────────────────────────────────────────────────────────────────────
 export function useSystem() {
   return useContext(SystemContext);
 }

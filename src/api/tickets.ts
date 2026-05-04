@@ -1,8 +1,9 @@
 //src\api\tickets.ts
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "http://127.0.0.1:8000/api/v1";
+import { apiFetch } from "./client";
 
 export interface Ticket {
-  id: number;
+  id: string;
   number: string;
   category: string;
   sub_service: string;
@@ -10,60 +11,75 @@ export interface Ticket {
   status: string;
 }
 
-// 🎟️ Create ticket (beneficiary side)
-export async function createTicket(data: {
-  category: string;
+// 🎟️ Create ticket
+export const createTicket = async (data: {
+  service_id: number;
   sub_service: string;
   priority: boolean;
-}) {
-  const res = await fetch(`${API_URL}/tickets/`, {
+}) => {
+  const res = await apiFetch(`/tickets/issue`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(data),
   });
 
   if (!res.ok) {
-    throw new Error("Failed to create ticket");
+    const error = await res.text();
+    throw new Error(error);
   }
 
   return res.json();
-}
+};
 
-// 📋 Get queue (agent screen)
-export async function getQueue(agentId: number) {
-  const res = await fetch(`${API_URL}/tickets/queue/${agentId}`);
+// 📋 Get queue (IMPORTANT FIX: agent_id is UUID string)
+
+export const getQueue = async (category: string, subService: string) => {
+  const res = await apiFetch(`/tickets/queue/${category}/${subService}`);
 
   if (!res.ok) {
     throw new Error("Failed to fetch queue");
   }
 
   return res.json();
-}
+};
 
-// 👉 Call next ticket (agent button)
-export async function callNextTicket(agentId: number) {
-  const res = await fetch(`${API_URL}/tickets/next/${agentId}`, {
+// 👉 Call next
+export async function callNextTicket(agentId: string) {
+  const res = await apiFetch(`/tickets/action`, {
     method: "POST",
+    body: JSON.stringify({
+      action: "call_next",
+      agent_id: agentId,
+    }),
   });
 
-  if (!res.ok) {
-    throw new Error("Failed to get next ticket");
-  }
-
+  if (!res.ok) throw new Error("Failed to call next ticket");
   return res.json();
 }
 
-// ✅ Mark done
-export async function finishTicket(ticketId: number) {
-  const res = await fetch(`${API_URL}/tickets/${ticketId}/done`, {
+// ✅ Done
+export async function finishTicket(agentId: string) {
+  const res = await apiFetch(`/tickets/action`, {
     method: "POST",
+    body: JSON.stringify({
+      action: "done",
+      agent_id: agentId,
+    }),
   });
 
-  if (!res.ok) {
-    throw new Error("Failed to finish ticket");
-  }
+  if (!res.ok) throw new Error("Failed to finish ticket");
+  return res.json();
+}
 
+// ⏭️ Skip
+export async function skipTicket(agentId: string) {
+  const res = await apiFetch(`/tickets/action`, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "skip",
+      agent_id: agentId,
+    }),
+  });
+
+  if (!res.ok) throw new Error("Failed to skip ticket");
   return res.json();
 }

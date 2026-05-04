@@ -1,6 +1,6 @@
 // src/pages/AgentPage.tsx
-import { getQueue, callNextTicket, finishTicket } from "../../api/tickets";
-import { useState, useEffect, useContext } from "react";
+
+import { useState, useEffect, useContext , useCallback} from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import {
@@ -9,7 +9,10 @@ import {
   getCategoryForService,
   type ServiceCategory,
 } from "../../context/SystemContext";
+import type { ReactNode } from "react";
 import CNASLogo from "../../assets/CNAS_logo.png";
+import type { Ticket } from "../../types/Ticket";
+import { getQueue, callNextTicket, finishTicket, skipTicket } from "../../api/tickets";
 import { AiFillSound } from "react-icons/ai";
 import "./AgentPage.css";
 import { FaSignOutAlt } from "react-icons/fa";
@@ -23,14 +26,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TicketStatus = "waiting" | "serving" | "paused" | "done" | "skipped";
 
-interface Ticket {
-  id: number;
-  number: string;
-  service: string;
-  arrivalTime: string;
-  status: TicketStatus;
-  waitMinutes: number;
-}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_LABEL: Record<TicketStatus, string> = {
@@ -177,37 +173,80 @@ export default function AgentPage() {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
 
-if (!auth) throw new Error("AuthContext not initialized");
+  if (!auth) throw new Error("AuthContext not initialized");
 
   const { user, logout } = auth;
+  const { isMulti, getAgent } = useSystem();
 
   const agentId = user?.agentId;
   const username = user?.username;
-useEffect(() => {
-  console.log("AUTH DEBUG:", user);
-  console.log("AGENT ID:", agentId);
-}, [user]);
-  const { isMulti, getAgent } = useSystem();
 
-  // Resolve this agent's assignment from the agents roster in SystemContext
-  const agentRecord      = agentId != null ? getAgent(agentId) : undefined;
-  const assignedService  = isMulti ? (agentRecord?.assignedService ?? undefined) : undefined;
-  const assignedCategory = isMulti && assignedService ? getCategoryForService(assignedService) : undefined;
-
-  // Queue is filtered to assigned service in multi mode, otherwise all services
+  // ─── STATE ─────────────────────────────
   const [queue, setQueue] = useState<Ticket[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const [servedToday, setServedToday] = useState(0);
   const [notification, setNotification] = useState<string | null>(null);
-  
-  const loadQueue = async () => {
-  if (!agentId) {
-    console.warn("Missing agentId");
-    return;
-  }
 
+  const [showProfile, setShowProfile] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [profileMenu, setProfileMenu] = useState(false);
+  const [view, setView] =
+    useState<"dashboard" | "profile" | "password">("dashboard");
+
+  const [profileData, setProfileData] = useState({
+    name: "",
+    lastName: "",
+    username: username || "",
+    guichet: "",
+    service: "",
+    sousService: "",
+    password: "",
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+
+  // ─── DERIVED ─────────────────────────────
+  const agentRecord = agentId != null ? getAgent(agentId) : undefined;
+
+  const assignedService = isMulti ? agentRecord?.assignedService : undefined;
+  const canLoadQueue =
+  isMulti &&
+  !!agentRecord &&
+  !!agentRecord.assignedService;
+  const assignedCategory =
+    isMulti && assignedService
+      ? getCategoryForService(assignedService)
+      : undefined;
+
+  // ─── LOAD QUEUE ─────────────────────────────
+  console.log("QUEUE CALL →", {
+  category: assignedCategory,
+  subService: assignedService,
+});
+ const loadQueue = useCallback(async () => {
   try {
-    const data = await getQueue(agentId);
+    if (isMulti && !canLoadQueue) {
+      console.warn("⛔ Queue blocked: missing agent assignment", {
+        agentRecord,
+        assignedService,
+        assignedCategory,
+      });
+      setQueue([]);
+      return;
+    }
+
+    const category = assignedCategory!;
+    const service = assignedService!;
+
+    console.log("🚀 FINAL QUEUE CALL →", { category, service });
+
+    const data = await getQueue(category, service);
 
     if (!Array.isArray(data)) {
       setQueue([]);
@@ -217,7 +256,7 @@ useEffect(() => {
     const formatted = data.map((t: any) => ({
       id: t.id,
       number: t.number,
-      service: t.sub_service,
+      service: t.sub_service ?? t.service_name ?? "",
       arrivalTime: t.created_at
         ? new Date(t.created_at).toLocaleTimeString("ar-DZ", {
             hour: "2-digit",
@@ -225,91 +264,45 @@ useEffect(() => {
           })
         : "--:--",
       status: t.status,
-      waitMinutes: t.waitMinutes ?? 0,
+      waitMinutes: t.wait_minutes ?? 0,
       category: t.category,
+      priority: Boolean(t.priority),
     }));
 
     setQueue(formatted);
-
   } catch (err) {
     console.error("Queue error:", err);
-    setQueue([]); // IMPORTANT: prevent UI freeze
+    setQueue([]);
   }
-};
-// ─── Profile Modal State ─────────────────────────────
-const [showProfile, setShowProfile] = useState(false);
-const [showMenu, setShowMenu] = useState(false);
-const [profileMenu, setProfileMenu] = useState(false);
-const [view, setView] = useState<"dashboard" | "profile" | "password">("dashboard");
-
-const [profileData, setProfileData] = useState({
-  name: "",
-  lastName: "",
-  username: username || "",
-  guichet: "",
-  service: assignedService || "",
-  sousService: assignedCategory || "",
-  password: "",
-});
-
-const [passwordData, setPasswordData] = useState({
-  current: "",
-  new: "",
-  confirm: "",
-});
-
-const [showConfirmPopup, setShowConfirmPopup] = useState(false);
-
-  
-
-  useEffect(() => {
-  if (agentRecord) {
-    setProfileData((prev) => ({
-      ...prev,
-      name: agentRecord.name || "",
-      lastName: agentRecord.lastName || "",
-    }));
-  }
-}, [agentRecord]);
-
- useEffect(() => {
-  if (!agentId) return;
-
-  const fetch = async () => {
-    await loadQueue();
-  };
-
-  fetch();
-}, [agentId]);
-
-useEffect(() => {
-  console.log("agentId:", agentId);
-}, [agentId]);
-
+}, [isMulti, canLoadQueue, assignedCategory, assignedService, agentRecord]);
+  // ─── DERIVED QUEUE ─────────────────────────────
   const current =
-  queue.find(t => t.status === "serving") ||
-  queue[0] ||
-  null;
-  const waiting = queue.filter(t => t.status === "waiting");
-  const done    = queue.filter((t) => t.status === "done" || t.status === "skipped");
+    queue.find((t) => t.status === "serving") || queue[0] || null;
 
+  const waiting = queue.filter((t) => t.status === "waiting");
+
+  const done = queue.filter(
+    (t) => t.status === "done" || t.status === "skipped"
+  );
+
+  // ─── HELPERS ─────────────────────────────
   const notify = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
   };
 
- const callNext = async () => {
-  if (!agentId) return;
+  const callNext = async () => {
+    if (!agentId) return;
 
-  try {
-    await callNextTicket(agentId);
-    await loadQueue();
-    notify("تم استدعاء التذكرة التالية");
-  } catch (err) {
-    console.error(err);
-    notify("خطأ في استدعاء التذكرة");
-  }
-};
+    try {
+      await callNextTicket(agentId);
+      await loadQueue();
+      notify("تم استدعاء التذكرة التالية");
+    } catch (err) {
+      console.error(err);
+      notify("خطأ في استدعاء التذكرة");
+    }
+  };
 
   const togglePause = () => {
     setIsPaused((p) => {
@@ -319,16 +312,16 @@ useEffect(() => {
   };
 
   const skipCurrent = async () => {
-  if (!current) return;
+    if (!current) return;
 
-  try {
-    await finishTicket(current.id);
-    await loadQueue();
-    notify(`تم تخطي التذكرة ${current.number}`);
-  } catch (err) {
-    console.error(err);
-  }
-};
+    try {
+      await finishTicket(agentId);
+      await loadQueue();
+      notify(`تم تخطي التذكرة ${current.number}`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const recallCurrent = () => {
     if (!current) return;
@@ -342,9 +335,9 @@ useEffect(() => {
   };
 
   const statCards = [
-    { label: "في الانتظار",  value: waiting.length,  color: "#3b82f6" },
-    { label: "تمت خدمتهم",  value: servedToday,      color: "#22c55e" },
-    { label: "إجمالي اليوم", value: queue.length,     color: "#8b5cf6" },
+    { label: "في الانتظار", value: waiting.length, color: "#3b82f6" },
+    { label: "تمت خدمتهم", value: servedToday, color: "#22c55e" },
+    { label: "إجمالي اليوم", value: queue.length, color: "#8b5cf6" },
   ];
 
   return (
@@ -459,7 +452,8 @@ useEffect(() => {
                 return (
                   <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
                     <span className="agent-ticket-num" style={{ color: STATUS_COLOR[ticket.status] }}>
-                      {ticket.number}
+                     {ticket.number}
+                     {ticket.priority && <span style={{ marginLeft: 6 }}>⭐</span>}
                     </span>
                     <div className="agent-ticket-info">
                       <span className="agent-ticket-service">{ticket.service}</span>
@@ -538,7 +532,10 @@ useEffect(() => {
 
             {current ? (
               <div className="agent-current-body">
-                <div className="agent-big-ticket-num">{current.number}</div>
+                <div className="agent-big-ticket-num">
+                    {current.number}
+                     {current.priority && <span style={{ marginLeft: 8 }}>⭐</span>}
+                </div>
                 <div className="agent-current-service">{current.service}</div>
                 <div className="agent-current-meta">
                   <div className="agent-meta-item">
@@ -901,4 +898,5 @@ useEffect(() => {
 
     </div>
   );
+  
 }

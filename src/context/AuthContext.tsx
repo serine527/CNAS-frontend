@@ -1,68 +1,56 @@
 //src\context\AuthContext.tsx
-import { createContext, useState, ReactNode } from "react";
+import { createContext, useState, useEffect } from "react";
 import { loginUser } from "../api/auth";
-import { useEffect } from "react";
-
-// ✅ Define User type
+import type { ReactNode } from "react";
+// agent_id is now a UUID string from the backend
 type User = {
   username: string;
   role: "admin" | "agent";
-  agentId?: number | null;
+  agentId?: string | null;    // ← changed from number to string (UUID)
 };
 
-// ✅ Define Context type
 type AuthContextType = {
   user: User | null;
   login: (username: string, password: string) => Promise<any>;
   logout: () => void;
 };
 
-// ✅ Create context with proper typing
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-// ✅ Props type
-type Props = {
-  children: ReactNode;
-};
+type Props = { children: ReactNode };
 
 export function AuthProvider({ children }: Props) {
-  useEffect(() => {
-  const storedUser = localStorage.getItem("user");
-
-  if (storedUser) {
-    setUser(JSON.parse(storedUser));
-  }
- }, []);
   const [user, setUser] = useState<User | null>(null);
 
- const login = async (username: string, password: string) => {
-  try {
-    const data = await loginUser(username, password);
+  // restore session from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const login = async (username: string, password: string) => {
+    const data = await loginUser(username, password);   // throws on error
 
     localStorage.setItem("token", data.access_token);
 
     const userData: User = {
       username: data.username,
-      role: data.role,
-      agentId: data.agent_id,
+      role:     data.role,
+      agentId:  data.agent_id,   // UUID string or null
     };
 
-
-    
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
     return data;
+  };
 
-  } catch (err: any) {
-    throw new Error(err.message || "Login failed");
-  }
-};
-
- const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user"); // 🔥 ADD THIS
-  setUser(null);
-};
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
