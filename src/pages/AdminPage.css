@@ -598,3 +598,7 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+.counters-section {
+  margin-top: 40px;   /* 👈 separates it from Services */
+}

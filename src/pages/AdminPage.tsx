@@ -1,4 +1,27 @@
 // src/pages/AdminPage.tsx
+import { useEffect } from "react";
+import {
+  getAgents,
+  createAgent,
+  deleteAgent,
+} from "../api/agents";
+import {
+  getCounters,
+  createCounter,
+  deleteCounter,
+} from "../api/counters";
+import {
+  getServices,
+  createService,
+  deleteService,
+} from "../api/services";
+
+import {
+  getSystem,
+  updateSystemMode,
+} from "../api/system";
+
+import { getStats } from "../api/stats";
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -52,18 +75,26 @@ function AgentAssignmentRow({ agent }: { agent: Agent }) {
   const [editing, setEditing]     = useState(false);
   const [category, setCategory]   = useState<ServiceCategory | "">(agent.category ?? "");
   const [service, setService]     = useState<string>(agent.assignedService ?? "");
-
+ 
+  
   const serviceOptions = category === "prestation"
     ? prestationServices
     : category === "medical"
     ? medicalServices
     : [];
 
-  const handleSave = () => {
-    if (!category || !service) return;
-    updateAgent(agent.id, { category, assignedService: service });
-    setEditing(false);
-  };
+    
+
+  const handleSave = async () => {
+  if (!category || !service) return;
+
+  await updateAgent(agent.id, {
+    category,
+    assigned_service: service,
+  });
+
+  setEditing(false);
+};
 
   const handleCategoryChange = (cat: ServiceCategory) => {
     setCategory(cat);
@@ -71,6 +102,7 @@ function AgentAssignmentRow({ agent }: { agent: Agent }) {
   };
 
   const colors = agent.category ? CATEGORY_COLOR[agent.category] : null;
+
 
   return (
     <tr>
@@ -140,29 +172,155 @@ function AgentAssignmentRow({ agent }: { agent: Agent }) {
   );
 }
 
+function AgentAssignmentRowCells({ agent }: { agent: Agent }) {
+  const { updateAgent } = useSystem();
+  const [editing, setEditing]   = useState(false);
+  const [category, setCategory] = useState<ServiceCategory | "">(agent.category ?? "");
+  const [service, setService]   = useState<string>(agent.assignedService ?? "");
+
+  const serviceOptions = category === "prestation"
+    ? prestationServices
+    : category === "medical"
+    ? medicalServices
+    : [];
+
+  const handleSave = () => {
+    if (!category || !service) return;
+    updateAgent(agent.id, { category, assignedService: service });
+    setEditing(false);
+  };
+
+  const handleCategoryChange = (cat: ServiceCategory) => {
+    setCategory(cat);
+    setService("");
+  };
+
+  const colors = agent.category ? CATEGORY_COLOR[agent.category] : null;
+
+  return (
+    <>
+      <td className="font-bold">{agent.name}</td>
+      <td>
+        {editing ? (
+          <select
+            className="assign-select"
+            value={category}
+            onChange={(e) => handleCategoryChange(e.target.value as ServiceCategory)}
+          >
+            <option value="">— التصنيف —</option>
+            <option value="prestation">{CATEGORY_LABEL.prestation}</option>
+            <option value="medical">{CATEGORY_LABEL.medical}</option>
+          </select>
+        ) : agent.category ? (
+          <span
+            className="assign-chip"
+            style={{ background: colors!.bg, color: colors!.text, border: `1px solid ${colors!.border}` }}
+          >
+            {CATEGORY_LABEL[agent.category]}
+          </span>
+        ) : (
+          <span className="assign-empty">غير مخصص</span>
+        )}
+      </td>
+      <td>
+        {editing ? (
+          <select
+            className="assign-select"
+            value={service}
+            onChange={(e) => setService(e.target.value)}
+            disabled={!category}
+          >
+            <option value="">— الخدمة —</option>
+            {serviceOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        ) : agent.assignedService ? (
+          <span className="assign-service">{agent.assignedService}</span>
+        ) : (
+          <span className="assign-empty">—</span>
+        )}
+      </td>
+      <td>
+        {editing ? (
+          <button
+            className="assign-save-btn"
+            onClick={handleSave}
+            disabled={!category || !service}
+            title="حفظ"
+          >
+            <FaCheck />
+          </button>
+        ) : (
+          <button className="assign-edit-btn" onClick={() => setEditing(true)} title="تعديل">
+            <FaEdit />
+          </button>
+        )}
+      </td>
+    </>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminPage() {
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
   const { config, setConfig, addAgent, removeAgent } = useSystem();
-
+ 
   const counterMode    = config.mode;
-  const setCounterMode = (mode: "multi" | "single") => setConfig({ ...config, mode });
+  const setCounterMode = async (mode: "single" | "multi") => {
+  await updateSystemMode(mode);
 
-  // ── Services (local — not yet in context) ────────────────────────────────
-  const [services, setServices] = useState<Service[]>([
-    { id: 1, name: "التقاعد والمنح",      count: 10, time: "15 دقيقة" },
-    { id: 2, name: "الرقابة الطبية",       count: 5,  time: "8 دقائق"  },
-    { id: 3, name: "تأمين المرض",          count: 8,  time: "12 دقيقة" },
-    { id: 4, name: "الأداءات والتعويضات", count: 12, time: "10 دقائق" },
+  setConfig({
+    ...config,
+    mode,
+  });
+ };
+ const loadAll = async () => {
+  const [agentsData, servicesData, systemData, countersData] = await Promise.all([
+    getAgents(),
+    getServices(),
+    getSystem(),
+    getCounters(),   // ✅ ADD THIS
   ]);
 
+  const agents = Array.isArray(agentsData) ? agentsData : [];
+  const services = Array.isArray(servicesData) ? servicesData : [];
+
+  // 🔥 FIX backend → frontend mapping
+  const formattedAgents = agents.map((a: any) => ({
+    ...a,
+    assignedService: a.assigned_service, // IMPORTANT FIX
+  }));
+
+  const formattedServices = services.map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    count: 0,
+    time: s.avg_time_min ? `${s.avg_time_min} دقيقة` : "—",
+  }));
+
+  setConfig({
+    ...config,
+    mode: systemData?.mode ?? "single",
+    agents: formattedAgents,
+  });
+
+  setServices(formattedServices);
+  setCounters(Array.isArray(countersData) ? countersData : []);
+};
+
+  // ── Services (local — not yet in context) ────────────────────────────────
+  const [services, setServices] = useState<any[]>([]);
   // ── Modals ───────────────────────────────────────────────────────────────
   const [showAddAgentModal,   setShowAddAgentModal]   = useState(false);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [newAgentName,        setNewAgentName]        = useState("");
   const [newServiceName,      setNewServiceName]      = useState("");
-
+  const [newServiceCategory, setNewServiceCategory] =
+  useState<ServiceCategory>("prestation");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [counters, setCounters] = useState<any[]>([]);
   // ── Chart data ───────────────────────────────────────────────────────────
   const lineData = {
     labels: ["08:00", "10:00", "12:00", "14:00", "16:00"],
@@ -177,27 +335,51 @@ export default function AdminPage() {
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleLogout = () => { logout?.(); navigate("/"); };
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleAddAgent = () => {
-    if (!newAgentName.trim()) return;
-    addAgent(newAgentName.trim());
-    setNewAgentName("");
-    setShowAddAgentModal(false);
-  };
+  useEffect(() => {
+  loadAll();
+  }, []);
 
-  const handleAddService = () => {
-    if (!newServiceName.trim()) return;
-    setServices((prev) => [
-      ...prev,
-      { id: Date.now(), name: newServiceName.trim(), count: 0, time: "—" },
-    ]);
-    setNewServiceName("");
-    setShowAddServiceModal(false);
-  };
+ const handleLogout = () => setShowLogoutConfirm(true);
 
-  const handleDeleteService = (id: number) =>
-    setServices((prev) => prev.filter((s) => s.id !== id));
+ const confirmLogout = () => {
+  logout?.();
+  navigate("/");
+ };
+ const handleAddAgent = async () => {
+  if (!newAgentName.trim()) return;
+
+  await createAgent({
+    name: newAgentName.trim(),
+    password: "cnas1234",
+  });
+
+  await loadAll();
+  setNewAgentName("");
+  setShowAddAgentModal(false);
+ };
+
+  const handleAddService = async () => {
+  if (!newServiceName.trim()) return;
+
+  await createService({
+    name: newServiceName,
+    category: newServiceCategory,
+    avg_time_min: 10,
+  });
+
+  setNewServiceName("");
+  setShowAddServiceModal(false);
+  await loadAll();
+ } ;
+
+  const handleDeleteService = async (id: number) => {
+  if (!window.confirm("Are you sure you want to delete this service?")) return;
+
+  await deleteService(id);   // 🔥 CALL BACKEND
+  await loadAll();           // 🔥 REFRESH DATA FROM DB
+};
 
   const unassignedCount = config.agents.filter(
     (a) => !a.assignedService
@@ -205,10 +387,10 @@ export default function AdminPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="admin-root">
+<div className="admin-root">
 
-      {/* ── HEADER ── */}
-      <header className="admin-header">
+       {/* ── HEADER ── */}
+       <header className="admin-header">
         <div className="header-right-section">
           <img src={CNASLogo} alt="CNAS" className="admin-header-logo" />
           <div className="header-text-box">
@@ -217,10 +399,7 @@ export default function AdminPage() {
           </div>
         </div>
         <div className="header-left-section">
-          <div className="notification-wrapper">
-            <FaBell />
-            <span className="notification-badge" />
-          </div>
+          
           <div className="admin-profile-pill">
             <div className="admin-avatar-circle">AD</div>
             <span className="admin-profile-name">مدير النظام</span>
@@ -229,10 +408,10 @@ export default function AdminPage() {
             <FaSignOutAlt /> تسجيل الخروج
           </button>
         </div>
-      </header>
+       </header>
 
-      {/* ── MAIN ── */}
-      <main className="admin-container">
+       {/* ── MAIN ── */}
+       <main className="admin-container">
 
         {/* Stat Cards */}
         <section className="admin-stats-row">
@@ -337,29 +516,37 @@ export default function AdminPage() {
             </thead>
             <tbody>
               {counterMode === "multi" ? (
-                config.agents.map((agent) => (
-                  <tr key={agent.id}>
-                    {/* Inline AgentAssignmentRow cells */}
-                    <AgentAssignmentRowCells agent={agent} />
-                    <td>
-                      <button
-                        className="delete-service-btn"
-                        onClick={() => removeAgent(agent.id)}
-                        title="حذف الوكيل"
-                      >
-                        <FaTrash />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
+  config.agents.map((agent) => (
+    <tr key={agent.id}>
+      <AgentAssignmentRowCells agent={agent} />
+
+      <td>
+        <button
+          className="delete-service-btn"
+          onClick={async () => {
+            if (window.confirm("Are you sure you want to delete this agent?")) {
+              await deleteAgent(agent.id);
+              await loadAll();
+            }
+          }}
+          title="حذف الوكيل"
+        >
+          <FaTrash />
+        </button>
+      </td>
+    </tr>
+  ))
+) : (
                 config.agents.map((agent) => (
                   <tr key={agent.id}>
                     <td className="font-bold">{agent.name}</td>
                     <td>
                       <button
                         className="delete-service-btn"
-                        onClick={() => removeAgent(agent.id)}
+                        onClick={async () => {
+                                 await deleteAgent(agent.id);
+                                 await loadAll();
+                                     }}
                         title="حذف الوكيل"
                       >
                         <FaTrash />
@@ -407,10 +594,68 @@ export default function AdminPage() {
             </tbody>
           </table>
         </section>
-      </main>
+{/* ── Counters Section ── */}
+<section className="admin-table-section counters-section">
+  <div className="table-header-box">
+    <h3>الشبابيك (Counters)</h3>
 
-      {/* ── Modal: Add Agent ── */}
-      {showAddAgentModal && (
+    <button
+      className="add-service-btn"
+      onClick={async () => {
+        const name = prompt("Enter counter name:");
+        if (!name) return;
+
+        await createCounter({ name });
+        await loadAll();
+      }}
+    >
+      <FaPlus /> إضافة شباك
+    </button>
+  </div>
+
+  <table className="admin-data-table">
+    <thead>
+      <tr>
+        <th>اسم الشباك</th>
+        <th>الحالة</th>
+        <th>حذف</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {counters.map((c) => (
+        <tr key={c.id}>
+          <td className="font-bold">{c.name}</td>
+
+          <td>
+            <span className="status-badge-active">
+              {c.is_active ? "نشط" : "متوقف"}
+            </span>
+          </td>
+
+          <td>
+            <button
+              className="delete-service-btn"
+              onClick={async () => {
+                if (window.confirm("Delete this counter?")) {
+                  await deleteCounter(c.id);
+                  await loadAll();
+                }
+              }}
+            >
+              <FaTrash />
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</section>
+
+       </main>
+
+       {/* ── Modal: Add Agent ── */}
+       {showAddAgentModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>إضافة وكيل جديد</h3>
@@ -427,117 +672,57 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-      )}
+       )}
 
-      {/* ── Modal: Add Service ── */}
-      {showAddServiceModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>إضافة خدمة جديدة</h3>
-            <input
-              type="text"
-              placeholder="اسم الخدمة"
-              value={newServiceName}
-              onChange={(e) => setNewServiceName(e.target.value)}
-              className="modal-input"
-            />
-            <div className="modal-buttons">
-              <button className="modal-cancel" onClick={() => setShowAddServiceModal(false)}>إلغاء</button>
-              <button className="modal-add" onClick={handleAddService}>إضافة</button>
-            </div>
-          </div>
-        </div>
-      )}
+       {/* ── Modal: Add Service ── */}
+       {showAddServiceModal && (
+       <div className="modal-overlay">
+       <div className="modal-content">
+        <h3>إضافة خدمة جديدة</h3>
+
+       <input
+        type="text"
+        placeholder="اسم الخدمة"
+        value={newServiceName}
+        onChange={(e) => setNewServiceName(e.target.value)}
+        className="modal-input"
+       />
+
+       <select
+        value={newServiceCategory}
+        onChange={(e) =>
+          setNewServiceCategory(e.target.value as ServiceCategory)
+        }
+        className="modal-input"
+       >
+        <option value="prestation">خدمات الاستحقاقات</option>
+        <option value="medical">الخدمات الطبية</option>
+       </select>
+
+       <div className="modal-buttons">
+        <button
+          className="modal-cancel"
+          onClick={() => setShowAddServiceModal(false)}
+        >
+          إلغاء
+        </button>
+
+        <button
+          className="modal-add"
+          onClick={handleAddService}
+        >
+          إضافة
+        </button>
+      </div>
     </div>
-  );
+     </div>
+
+     
+)
 }
 
-// ─── Extracted cells component for multi-mode agent rows ─────────────────────
-function AgentAssignmentRowCells({ agent }: { agent: Agent }) {
-  const { updateAgent } = useSystem();
-  const [editing, setEditing]   = useState(false);
-  const [category, setCategory] = useState<ServiceCategory | "">(agent.category ?? "");
-  const [service, setService]   = useState<string>(agent.assignedService ?? "");
 
-  const serviceOptions = category === "prestation"
-    ? prestationServices
-    : category === "medical"
-    ? medicalServices
-    : [];
 
-  const handleSave = () => {
-    if (!category || !service) return;
-    updateAgent(agent.id, { category, assignedService: service });
-    setEditing(false);
-  };
-
-  const handleCategoryChange = (cat: ServiceCategory) => {
-    setCategory(cat);
-    setService("");
-  };
-
-  const colors = agent.category ? CATEGORY_COLOR[agent.category] : null;
-
-  return (
-    <>
-      <td className="font-bold">{agent.name}</td>
-      <td>
-        {editing ? (
-          <select
-            className="assign-select"
-            value={category}
-            onChange={(e) => handleCategoryChange(e.target.value as ServiceCategory)}
-          >
-            <option value="">— التصنيف —</option>
-            <option value="prestation">{CATEGORY_LABEL.prestation}</option>
-            <option value="medical">{CATEGORY_LABEL.medical}</option>
-          </select>
-        ) : agent.category ? (
-          <span
-            className="assign-chip"
-            style={{ background: colors!.bg, color: colors!.text, border: `1px solid ${colors!.border}` }}
-          >
-            {CATEGORY_LABEL[agent.category]}
-          </span>
-        ) : (
-          <span className="assign-empty">غير مخصص</span>
-        )}
-      </td>
-      <td>
-        {editing ? (
-          <select
-            className="assign-select"
-            value={service}
-            onChange={(e) => setService(e.target.value)}
-            disabled={!category}
-          >
-            <option value="">— الخدمة —</option>
-            {serviceOptions.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        ) : agent.assignedService ? (
-          <span className="assign-service">{agent.assignedService}</span>
-        ) : (
-          <span className="assign-empty">—</span>
-        )}
-      </td>
-      <td>
-        {editing ? (
-          <button
-            className="assign-save-btn"
-            onClick={handleSave}
-            disabled={!category || !service}
-            title="حفظ"
-          >
-            <FaCheck />
-          </button>
-        ) : (
-          <button className="assign-edit-btn" onClick={() => setEditing(true)} title="تعديل">
-            <FaEdit />
-          </button>
-        )}
-      </td>
-    </>
-  );
+</div> 
+);
 }

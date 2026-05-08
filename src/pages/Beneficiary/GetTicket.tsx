@@ -101,12 +101,12 @@ const service_id =
     : serviceIndex + 10;
 
 useEffect(() => {
-  if (!ticketTaken || !service || !ticketNumber || !subService) return;
+  if (!ticketTaken || !service || !ticketNumber) return;
 
   const interval = setInterval(async () => {
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/tickets/queue/${service}/${subService}`
+        `http://127.0.0.1:8000/api/v1/tickets/queue/${service}`
       );
 
       if (!res.ok) {
@@ -128,7 +128,8 @@ useEffect(() => {
   }, 3000);
 
   return () => clearInterval(interval);
-}, [ticketTaken, service, subService, ticketNumber]);
+}, [ticketTaken, service, ticketNumber]);
+
   const queuePosition = queue.findIndex(t => t.number === ticketNumber);
   const peopleAhead = queuePosition > 0 ? queuePosition : 0;
   const estWait = peopleAhead * 5;

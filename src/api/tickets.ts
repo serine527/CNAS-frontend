@@ -32,12 +32,10 @@ export const createTicket = async (data: {
 
 // 📋 Get queue (IMPORTANT FIX: agent_id is UUID string)
 
-export const getQueue = async (category: string, subService: string) => {
-  const res = await apiFetch(`/tickets/queue/${category}/${subService}`);
+export const getQueue = async (category: string) => {
+  const res = await apiFetch(`/tickets/queue/${category}`);
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch queue");
-  }
+  if (!res.ok) throw new Error("Failed to fetch queue");
 
   return res.json();
 };

@@ -1,5 +1,5 @@
 // src/pages/AgentPage.tsx
-
+import type { Agent } from "../../context/SystemContext";
 import { useState, useEffect, useContext , useCallback} from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
@@ -176,7 +176,7 @@ export default function AgentPage() {
   if (!auth) throw new Error("AuthContext not initialized");
 
   const { user, logout } = auth;
-  const { isMulti, getAgent } = useSystem();
+  const { config, isMulti } = useSystem();
 
   const agentId = user?.agentId;
   const username = user?.username;
@@ -212,17 +212,26 @@ export default function AgentPage() {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
 
   // ─── DERIVED ─────────────────────────────
-  const agentRecord = agentId != null ? getAgent(agentId) : undefined;
+ const agents = config?.agents ?? [];
+ const agentRecord = agents.find((a) => a.id === agentId);
 
-  const assignedService = isMulti ? agentRecord?.assignedService : undefined;
+  const assignedService = agentRecord ? agentRecord.assignedService : undefined;
+
   const canLoadQueue =
   isMulti &&
   !!agentRecord &&
   !!agentRecord.assignedService;
-  const assignedCategory =
-    isMulti && assignedService
-      ? getCategoryForService(assignedService)
-      : undefined;
+  
+  const assignedCategory = agentRecord?.category;
+
+console.log("USER:", user);
+console.log("AGENT ID:", agentId);
+console.log("AGENT RECORD:", agentRecord);
+console.log("ASSIGNED SERVICE:", assignedService);
+console.log("ASSIGNED CATEGORY:", assignedCategory);
+
+  
+
 
   // ─── LOAD QUEUE ─────────────────────────────
   console.log("QUEUE CALL →", {
@@ -231,42 +240,35 @@ export default function AgentPage() {
 });
  const loadQueue = useCallback(async () => {
   try {
-    if (isMulti && !canLoadQueue) {
-      console.warn("⛔ Queue blocked: missing agent assignment", {
-        agentRecord,
-        assignedService,
-        assignedCategory,
-      });
-      setQueue([]);
-      return;
-    }
+    if (!assignedCategory) return;
 
-    const category = assignedCategory!;
-    const service = assignedService!;
+    console.log("LOADING CATEGORY:", assignedCategory);
 
-    console.log("🚀 FINAL QUEUE CALL →", { category, service });
-
-    const data = await getQueue(category, service);
-
-    if (!Array.isArray(data)) {
-      setQueue([]);
-      return;
-    }
+    const data = await getQueue(assignedCategory);
+    const mapStatus = (s: any): TicketStatus => {
+     switch (s) {
+    case 0: return "waiting";
+    case 1: return "serving";
+    case 2: return "done";
+    case 3: return "skipped";
+    default: return "waiting";
+  }
+};
+    console.log("QUEUE DATA:", data);
 
     const formatted = data.map((t: any) => ({
       id: t.id,
       number: t.number,
-      service: t.sub_service ?? t.service_name ?? "",
+      status: t.status,
+      priority: t.priority,
+      service: t.sub_service || "—",
       arrivalTime: t.created_at
         ? new Date(t.created_at).toLocaleTimeString("ar-DZ", {
             hour: "2-digit",
             minute: "2-digit",
           })
         : "--:--",
-      status: t.status,
-      waitMinutes: t.wait_minutes ?? 0,
-      category: t.category,
-      priority: Boolean(t.priority),
+      waitMinutes: 0,
     }));
 
     setQueue(formatted);
@@ -274,10 +276,21 @@ export default function AgentPage() {
     console.error("Queue error:", err);
     setQueue([]);
   }
-}, [isMulti, canLoadQueue, assignedCategory, assignedService, agentRecord]);
+}, [assignedCategory, isMulti, agentRecord]);
+
+
+
+useEffect(() => {
+  if (!assignedCategory || !agentId) return;
+
+  loadQueue();
+}, [assignedCategory, loadQueue]);
+
   // ─── DERIVED QUEUE ─────────────────────────────
-  const current =
-    queue.find((t) => t.status === "serving") || queue[0] || null;
+ const current =
+  queue.find((t) => t.status === "serving") ||
+  queue.find((t) => t.status === "waiting") ||
+  null;
 
   const waiting = queue.filter((t) => t.status === "waiting");
 
@@ -447,7 +460,7 @@ export default function AgentPage() {
             </div>
             <div className="agent-ticket-list">
               {queue.map((ticket) => {
-                const ticketCategory = getCategoryForService(ticket.service);
+                const ticketCategory = ticket.category ?? getCategoryForService(ticket.service);
                 const catColors = CATEGORY_COLOR[ticketCategory];
                 return (
                   <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
