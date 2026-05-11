@@ -720,7 +720,31 @@ export default function AdminPage() {
      
 )
 }
+{showLogoutConfirm && (
+  <div className="modal-overlay">
+    <div className="logout-modal">
+      <h3>تأكيد تسجيل الخروج</h3>
 
+      <p>هل أنت متأكد أنك تريد تسجيل الخروج؟</p>
+
+      <div className="logout-modal-actions">
+        <button
+          className="logout-cancel"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          إلغاء
+        </button>
+
+        <button
+          className="logout-confirm"
+          onClick={confirmLogout}
+        >
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 
 </div> 

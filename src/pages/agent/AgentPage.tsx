@@ -9,6 +9,7 @@ import {
   getCategoryForService,
   type ServiceCategory,
 } from "../../context/SystemContext";
+import { FcOvertime } from "react-icons/fc";
 import type { ReactNode } from "react";
 import CNASLogo from "../../assets/CNAS_logo.png";
 import type { Ticket } from "../../types/Ticket";
@@ -569,9 +570,15 @@ useEffect(() => {
               </div>
             ) : (
               <div className="agent-empty-state">
-                <div className="agent-empty-icon">⏳</div>
-                <p className="agent-empty-text">لا توجد تذكرة قيد الخدمة</p>
-              </div>
+  <div className="agent-empty-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  </div>
+
+  <p className="agent-empty-text">لا توجد تذكرة قيد الخدمة</p>
+</div>
             )}
           </div>
 
@@ -659,33 +666,41 @@ useEffect(() => {
          <h2>الملف الشخصي</h2>
         <p><strong>اسم المستخدم:</strong> {username}</p>
 
-       <p>
-   <strong>الاسم:</strong>
-   <input
+      <p>
+  <strong>الاسم:</strong>
+  <input
     className="profile-input"
     value={profileData.name}
     onChange={(e) =>
       setProfileData({ ...profileData, name: e.target.value })
     }
-   />
-   </p>
+  />
+</p>
 
-   <p>
-    <strong>اللقب:</strong>
-    <input
+<p>
+  <strong>اللقب:</strong>
+  <input
     className="profile-input"
     value={profileData.lastName}
     onChange={(e) =>
       setProfileData({ ...profileData, lastName: e.target.value })
     }
-   />
-   </p>
+  />
+</p>
 
-        <p><strong>الهيكل:</strong> {agentRecord?.structure || "-"}</p>
+{/* ✅ moved here */}
+<p>
+  <strong>الخدمة:</strong>
+  <input
+    className="profile-input"
+    value={assignedService || ""}
+    disabled
+  />
+</p>
 
-        <p><strong>الشباك / الطابور:</strong> {agentRecord?.queue || "-"}</p>
+<p><strong>الهيكل:</strong> {agentRecord?.structure || "-"}</p>
 
-        <p><strong>الخدمة:</strong> {assignedService || "-"}</p>
+<p><strong>الشباك / الطابور:</strong> {agentRecord?.queue || "-"}</p>
 
         {isMulti && (
           <>

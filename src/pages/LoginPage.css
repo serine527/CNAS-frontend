@@ -12,6 +12,72 @@
   overflow: hidden;
 }
 
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.login-header {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+
+  display: flex;
+  justify-content: flex-end;
+
+  width: calc(100% - 64px);
+
+  z-index: 2;
+}
+
+.login-back-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+
+  padding: 10px 16px;
+  border-radius: 14px;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #0f172a;
+  cursor: pointer;
+
+  border: 1px solid rgba(255, 255, 255, 0.6);
+
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+
+  transition: all 0.2s ease;
+}
+
+.login-back-btn:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+}
+
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+.login-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 52px 44px 48px;
+  width: 100%;
+  max-width: 420px;
+  min-height: 620px;
+
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.09);
+  border: 1px solid #e8efff;
+
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Optional smaller spacing from top */
+.login-root {
+  padding-top: 30px;
+}
+
 /* ─── Background shapes ──────────────────────────────────────────────────────── */
 .login-bg-shape {
   position: fixed;
@@ -228,4 +294,39 @@
   color: #94a3b8;
   text-align: center;
   line-height: 1.6;
+}
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input {
+  width: 100%;
+  padding-left: 44px;  /* space for icon */
+}
+
+.eye-icon {
+  position: absolute;
+  left: 14px;  /* inside input */
+  top: 50%;
+  transform: translateY(-50%);
+
+  cursor: pointer;
+  color: #64748b;
+  font-size: 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye-icon:hover {
+  color: #0047ab;
+}
+.login-help {
+  margin-top: 14px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.5;
 }

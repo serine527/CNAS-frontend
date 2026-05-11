@@ -2,7 +2,8 @@
 import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaClock, FaUsers, FaChartBar, FaEnvelope } from "react-icons/fa";
-
+import { FaRegFileAlt, FaRegHospital, FaRegIdCard } from "react-icons/fa";
+import { FiActivity, FiFileText } from "react-icons/fi";
 import { AuthContext } from "../context/AuthContext";
 import CNASLogo from "../assets/CNAS_logo.png";
 import styles from "./LandingPage.module.css";
@@ -60,28 +61,62 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SERVICES */}
-      <section id="services" className={`${styles.section} ${styles.servicesSection}`}>
-        <h2>الخدمات</h2>
-        <div className={styles.serviceCards}>
-          <div
-            className={styles.serviceCard}
-            onClick={() => navigate("/beneficiary")}
-            style={{ cursor: "pointer" }}
-          >
-            <h3>الاداءات</h3>
-            <p>خدمات الضمان الاجتماعي المختلفة</p>
-          </div>
-          <div
-            className={styles.serviceCard}
-            onClick={() => navigate("/beneficiary")}
-            style={{ cursor: "pointer" }}
-          >
-            <h3>المراقبة الطبية</h3>
-            <p>متابعة الحالات الصحية والتحقق</p>
-          </div>
-        </div>
-      </section>
+     {/* SERVICES */}
+<section id="services" className={`${styles.section} ${styles.servicesSection}`}>
+  <h2> الخدمات المتوفرة</h2>
+
+  <div className={styles.serviceCards}>
+
+    {/* PRESTATION */}
+    <div
+      className={styles.serviceCard}
+      onClick={() => navigate("/beneficiary")}
+      style={{ cursor: "pointer" }}
+    >
+      <h3 className={styles.groupTitle}>
+  <FaRegFileAlt className={styles.titleIcon} />
+  خدمات الاستحقاقات
+</h3>
+
+      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+        
+        <div className={styles.smallCard}> تحديث بطاقة الشفاء</div>
+        <div className={styles.smallCard}> طلب بطاقة الشفاء أو نسخة منها</div>
+        <div className={styles.smallCard}> طلب استرجاع التعويضات</div>
+        <div className={styles.smallCard}> طلب تمديد إجازة الأمومة</div>
+        <div className={styles.smallCard}> تحديث ملف المؤمن عليه</div>
+        <div className={styles.smallCard}> فتح الحقوق للمؤمن عليه والعائلة</div>
+        <div className={styles.smallCard}> شهادة انتساب أو عدم انتساب</div>
+        <div className={styles.smallCard}> تغطية تجهيزات طبية أو علاج</div>
+        <div className={styles.smallCard}> إبلاغ عن حادث عمل</div>
+
+      </div>
+    </div>
+
+    {/* MEDICAL */}
+    <div
+      className={styles.serviceCard}
+      onClick={() => navigate("/beneficiary")}
+      style={{ cursor: "pointer" }}
+    >
+     <h3 className={styles.groupTitle}>
+  <FaRegHospital className={styles.titleIcon} />
+  المراقبة الطبية
+</h3>
+
+      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+
+        <div className={styles.smallCard}> فحص طبي بعد توقف عن العمل</div>
+        <div className={styles.smallCard}> تمديد إجازة الأمومة</div>
+        <div className={styles.smallCard}> فحص قبلي</div>
+        <div className={styles.smallCard}> استرجاع تكاليف العلاج</div>
+        <div className={styles.smallCard}> متابعة طبية عامة</div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
 
       {/* STATS */}
       <section className={`${styles.section} ${styles.statsSection}`}>

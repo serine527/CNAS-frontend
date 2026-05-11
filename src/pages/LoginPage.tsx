@@ -1,9 +1,9 @@
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { IoIosArrowBack } from "react-icons/io";
 import { AuthContext } from "../context/AuthContext";
 import { useSystem } from "../context/SystemContext";
-
+import { IoIosEye, IoIosEyeOff } from "react-icons/io";
 import CNASLogo from "../assets/CNAS_logo.png";
 import "./LoginPage.css";
 
@@ -57,6 +57,17 @@ export default function LoginPage() {
       <div className="login-bg-shape login-bg-shape--1" />
       <div className="login-bg-shape login-bg-shape--2" />
       <div className="login-bg-shape login-bg-shape--3" />
+       
+<div className="login-header">
+  <button
+    className="login-back-btn"
+    onClick={() => navigate("/")}
+  >
+     <IoIosArrowBack />
+     رجوع
+  </button>
+
+</div>
 
       <div className="login-card">
         <div className="login-logo-wrap">

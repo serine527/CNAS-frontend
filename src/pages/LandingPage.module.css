@@ -30,7 +30,6 @@
   gap: 25px;
   font-weight: 500;
   cursor: pointer;
-  margin-left: 220px;
 }
 
 .loginButton {
@@ -178,4 +177,96 @@
   color: #fff;
   border: none;
   cursor: pointer;
+}
+@media (max-width: 1024px) {
+  .header {
+    padding: 12px 16px;
+  }
+
+  .nav {
+    gap: 18px;
+    font-size: 14px;
+  }
+
+  .heroContent h1 {
+    font-size: 34px;
+  }
+
+  .serviceCards {
+    gap: 20px;
+  }
+
+  .statsCards {
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 20px; 
+  }
+
+  .nav {
+    justify-content: center;
+    gap: 12px;
+    font-size: 13px;
+  }
+
+  .hero {
+    height: 70vh;
+    padding: 20px;
+  }
+
+  .heroContent h1 {
+    font-size: 26px;
+  }
+
+  .heroContent p {
+    font-size: 14px;
+  }
+
+  .getTicketButton {
+    font-size: 18px;
+    padding: 14px 28px;
+  }
+
+  .serviceCards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .serviceCard {
+    width: 90%;
+  }
+
+  .statsCards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .loginModal {
+    width: 90%;
+  }
+}
+@media (max-width: 480px) {
+  .heroContent h1 {
+    font-size: 22px;
+  }
+
+  .heroContent p {
+    font-size: 13px;
+  }
+
+  .getTicketButton {
+    font-size: 16px;
+    padding: 12px 20px;
+  }
+
+  .nav {
+    flex-direction: column;
+    align-items: center;
+  }
 }
