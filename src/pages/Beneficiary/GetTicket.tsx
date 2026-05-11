@@ -6,6 +6,8 @@ import { createTicket } from "../../api/tickets";
 import { useSystem } from "../../context/SystemContext";
 import { QueueContext } from "../../context/QueueContext";
 import { useContext } from "react";
+import { cancelTicket } from "../../api/tickets";
+
 
 export default function GetTicket() {
   const [service, setService] = useState<"prestation" | "medical" | "">("");
@@ -13,7 +15,7 @@ export default function GetTicket() {
   const [priority, setPriority] = useState(false);
   const [ticketTaken, setTicketTaken] = useState(false);
 
-  const [ticketNumber, setTicketNumber] = useState("");
+const [ticket, setTicket] = useState<any>(null);
   const [queue, setQueue] = useState<any[]>([]);
   const [currentTicket, setCurrentTicket] = useState<string>("");
 
@@ -77,11 +79,8 @@ const handleTakeTicket = async () => {
     if (!newTicket || !newTicket.number) {
       throw new Error("Invalid response from backend");
     }
-
-    setTicketNumber(newTicket.number);
-    setQueue([newTicket.number]);
-    setCurrentTicket(newTicket.number);
-    setTicketTaken(true);
+setTicket(newTicket);        // ✅ ADD THIS
+setTicketTaken(true);
 
   } catch (err: any) {
     console.error("ERROR:", err);
@@ -89,7 +88,28 @@ const handleTakeTicket = async () => {
   }
 };
 
+const handleCancelTicket = async () => {
+  console.log("CANCELING:", ticket);
 
+  if (!ticket?.id) {
+    alert("No ticket id found");
+    return;
+  }
+
+  try {
+    await cancelTicket(ticket.id);
+
+    setTicket(null);
+    setTicketTaken(false);
+    setService("");
+    setSubService("");
+    setPriority(false);
+
+  } catch (err: any) {
+    console.error(err);
+    alert(err.message || "Cancel failed");
+  }
+};
 
 const serviceIndex = (
   service === "prestation" ? prestationServices : medicalServices
@@ -101,7 +121,7 @@ const service_id =
     : serviceIndex + 10;
 
 useEffect(() => {
-  if (!ticketTaken || !service || !ticketNumber) return;
+  if (!ticketTaken || !service || !ticket?.number) return;
 
   const interval = setInterval(async () => {
     try {
@@ -128,9 +148,9 @@ useEffect(() => {
   }, 3000);
 
   return () => clearInterval(interval);
-}, [ticketTaken, service, ticketNumber]);
+}, [ticketTaken, service, ]);
 
-  const queuePosition = queue.findIndex(t => t.number === ticketNumber);
+  const queuePosition = queue.findIndex(t => t.number === ticket?.number);
   const peopleAhead = queuePosition > 0 ? queuePosition : 0;
   const estWait = peopleAhead * 5;
   const serviceLabel = service === "prestation" ? "الاداءات" : "المراقبة الطبية";
@@ -242,7 +262,7 @@ useEffect(() => {
                 )}
               </div>
               <p className={styles.heroLabel}>رقم تذكرتك</p>
-              <h1 className={styles.heroNumber}>{ticketNumber}</h1>
+              <h1 className={styles.heroNumber}>{ticket?.number}</h1>
               <p className={styles.heroService}>{serviceLabel}</p>
             </div>
 
@@ -324,7 +344,7 @@ useEffect(() => {
     key={i}
     className={`${styles.pill} ${
       t.number === currentTicket ? styles.pillCurrent
-      : t.number === ticketNumber ? styles.pillMine
+      : t.number === ticket?.number ? styles.pillMine
       : styles.pillWaiting
     }`}
   >
@@ -333,7 +353,7 @@ useEffect(() => {
     {/* ⭐ PRIORITY */}
     {t.priority && <span style={{ marginLeft: 4 }}>⭐</span>}
 
-    {t.number === ticketNumber && (
+    {t.number === ticket?.number && (
       <span className={styles.pillYouTag}>أنت</span>
     )}
   </div>
@@ -371,7 +391,7 @@ useEffect(() => {
             </button>
 
             <button
-  onClick={() => cancelTicket(ticket.id)}
+  onClick={handleCancelTicket}
   className={styles.cancelTicketButton}
 >
   إلغاء التذكرة

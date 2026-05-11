@@ -81,3 +81,16 @@ export async function skipTicket(agentId: string) {
   if (!res.ok) throw new Error("Failed to skip ticket");
   return res.json();
 }
+
+export const cancelTicket = async (ticketId: string) => {
+  const res = await apiFetch(`/tickets/${ticketId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error);
+  }
+
+  return res.json();
+};
