@@ -56,42 +56,11 @@ const CATEGORY_COLOR: Record<ServiceCategory, { bg: string; text: string; border
   medical:    { bg: "rgba(22,168,76,0.10)", text: "#16a84c", border: "#16a84c" },
 };
 
-
-
-
-// ─── Audio ────────────────────────────────────────────────────────────────────
-const playDing = () => {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0.4, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.6);
-    oscillator.onended = () => ctx.close();
-  } catch (e) {
-    console.warn("Audio playback failed:", e);
-  }
+const playNotification = () => {
+  const audio = new Audio("/mixkit-message-pop-alert-2354.mp3");
+  audio.play().catch((e) => console.log("Audio blocked:", e));
 };
 
-/*     ////////////////////////////////////////////////////
-function Clock() {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <>{time.toLocaleTimeString("ar-DZ", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</>
-  );
-}  */
-
-// ─── Mode Badge (header button showing current mode) ─────────────────────────
 function ModeBadge({ isMulti, assignedService, category }: {
   isMulti: boolean;
   assignedService?: string;
@@ -338,10 +307,13 @@ useEffect(() => {
   };
 
   const recallCurrent = () => {
-    if (!current) return;
-    playDing();
-    notify(`إعادة استدعاء التذكرة ${current.number}`);
-  };
+  if (!current) return;
+
+  playDing(); // existing tone
+  playNotification(); // 🔁 repeat main alert sound
+
+  notify(`إعادة استدعاء التذكرة ${current.number}`);
+};
 
   const handleLogout = () => {
     logout?.();
@@ -548,7 +520,7 @@ useEffect(() => {
               <div className="agent-current-body">
                 <div className="agent-big-ticket-num">
                     {current.number}
-                     {current.priority && <span style={{ marginLeft: 8 }}>⭐</span>}
+                     {current.priority && <span style={{ marginLeft: 8 }}></span>}
                 </div>
                 <div className="agent-current-service">{current.service}</div>
                 <div className="agent-current-meta">

@@ -18,6 +18,9 @@ export default function GetTicket() {
 const [ticket, setTicket] = useState<any>(null);
   const [queue, setQueue] = useState<any[]>([]);
   const [currentTicket, setCurrentTicket] = useState<string>("");
+  const [called, setCalled] = useState(false);
+  const [calledData, setCalledData] = useState<any>(null);
+
 
   const prestationServices: string[] = [
     "تحديث بطاقة الشفاء",
@@ -82,6 +85,8 @@ const handleTakeTicket = async () => {
 setTicket(newTicket);        // ✅ ADD THIS
 setTicketTaken(true);
 
+localStorage.setItem("ticket_id", newTicket.id);
+
   } catch (err: any) {
     console.error("ERROR:", err);
     alert(err.message || "Backend error");
@@ -99,7 +104,7 @@ const handleCancelTicket = async () => {
   try {
     await cancelTicket(ticket.id);
 
-    setTicket(null);
+    localStorage.removeItem("ticket_id");
     setTicketTaken(false);
     setService("");
     setSubService("");
@@ -150,6 +155,38 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, [ticketTaken, service, ]);
 
+useEffect(() => {
+
+  if (Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
+
+}, []);
+useEffect(() => {
+  if (!ticket?.id) return;
+
+  const ws = new WebSocket(`ws://127.0.0.1:8000/ws/ticket/${ticket.id}`);
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "ticket_called") {
+      setCalled(true);
+      setCalledData(data);
+
+      new Audio("/mixkit-message-pop-alert-2354.mp3").play().catch(() => {});
+
+      if (Notification.permission === "granted") {
+        new Notification("تم استدعاء تذكرتك", {
+          body: `رقمك ${data.ticket_number}`,
+        });
+      }
+    }
+  };
+
+  return () => ws.close();
+}, [ticket?.id]);
+
   const queuePosition = queue.findIndex(t => t.number === ticket?.number);
   const peopleAhead = queuePosition > 0 ? queuePosition : 0;
   const estWait = peopleAhead * 5;
@@ -191,8 +228,32 @@ useEffect(() => {
     </button>
   </div>
 </header>
+
   
- 
+
+     {called && (
+  <div className={styles.calledPopup}>
+    
+    <div className={styles.calledCard}>
+
+      <h1> تم استدعاؤك</h1>
+
+      <h2>{calledData?.ticket_number}</h2>
+
+      <p>
+        يرجى التوجه إلى الشباك
+      </p>
+
+      <button
+        onClick={() => setCalled(false)}
+      >
+        حسناً
+      </button>
+
+    </div>
+
+  </div>
+)}
 
 
 
