@@ -76,33 +76,29 @@ function AgentAssignmentRow({ agent }: { agent: Agent }) {
   const [category, setCategory]   = useState<ServiceCategory | "">(agent.category ?? "");
   const [service, setService]     = useState<string>(agent.assignedService ?? "");
  
-  
   const serviceOptions = category === "prestation"
     ? prestationServices
     : category === "medical"
     ? medicalServices
     : [];
 
-    
-
   const handleSave = async () => {
-  if (!category || !service) return;
+    if (!category || !service) return;
 
-  await updateAgent(agent.id, {
-    category,
-    assigned_service: service,
-  });
+    await updateAgent(agent.id, {
+      category,
+      assigned_service: service,
+    });
 
-  setEditing(false);
-};
+    setEditing(false);
+  };
 
   const handleCategoryChange = (cat: ServiceCategory) => {
     setCategory(cat);
-    setService(""); // reset service when category changes
+    setService("");
   };
 
   const colors = agent.category ? CATEGORY_COLOR[agent.category] : null;
-
 
   return (
     <tr>
@@ -266,49 +262,65 @@ export default function AdminPage() {
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
   const { config, setConfig, addAgent, removeAgent } = useSystem();
- 
+
+  // ── Stats state ──────────────────────────────────────────────────────────
+  const [stats, setStats] = useState({
+    totalAgents: 0,
+    activeCounters: 0,
+    waitingCitizens: 0,
+    avgWaitTime: 0,
+  });
+
   const counterMode    = config.mode;
   const setCounterMode = async (mode: "single" | "multi") => {
-  await updateSystemMode(mode);
+    await updateSystemMode(mode);
+    setConfig({
+      ...config,
+      mode,
+    });
+  };
 
-  setConfig({
-    ...config,
-    mode,
-  });
- };
- const loadAll = async () => {
-  const [agentsData, servicesData, systemData, countersData] = await Promise.all([
-    getAgents(),
-    getServices(),
-    getSystem(),
-    getCounters(),   // ✅ ADD THIS
-  ]);
+  const loadAll = async () => {
+    const [agentsData, servicesData, systemData, countersData, statsData] = await Promise.all([
+      getAgents(),
+      getServices(),
+      getSystem(),
+      getCounters(),
+      getStats(),  // ✅ real stats from backend
+    ]);
 
-  const agents = Array.isArray(agentsData) ? agentsData : [];
-  const services = Array.isArray(servicesData) ? servicesData : [];
+    const agents = Array.isArray(agentsData) ? agentsData : [];
+    const services = Array.isArray(servicesData) ? servicesData : [];
 
-  // 🔥 FIX backend → frontend mapping
-  const formattedAgents = agents.map((a: any) => ({
-    ...a,
-    assignedService: a.assigned_service, // IMPORTANT FIX
-  }));
+    const formattedAgents = agents.map((a: any) => ({
+      ...a,
+      assignedService: a.assigned_service,
+    }));
 
-  const formattedServices = services.map((s: any) => ({
-    id: s.id,
-    name: s.name,
-    count: 0,
-    time: s.avg_time_min ? `${s.avg_time_min} دقيقة` : "—",
-  }));
+    const formattedServices = services.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      count: 0,
+      time: s.avg_time_min ? `${s.avg_time_min} دقيقة` : "—",
+    }));
 
-  setConfig({
-    ...config,
-    mode: systemData?.mode ?? "single",
-    agents: formattedAgents,
-  });
+    setConfig({
+      ...config,
+      mode: systemData?.mode ?? "single",
+      agents: formattedAgents,
+    });
 
-  setServices(formattedServices);
-  setCounters(Array.isArray(countersData) ? countersData : []);
-};
+    setServices(formattedServices);
+    setCounters(Array.isArray(countersData) ? countersData : []);
+
+    // ✅ Set real stats from backend
+    setStats({
+      totalAgents:     statsData?.total_agents      ?? 0,
+      activeCounters:  statsData?.active_counters   ?? 0,
+      waitingCitizens: statsData?.waiting_citizens  ?? 0,
+      avgWaitTime:     statsData?.avg_wait_time_min ?? 0,
+    });
+  };
 
   // ── Services (local — not yet in context) ────────────────────────────────
   const [services, setServices] = useState<any[]>([]);
@@ -318,9 +330,10 @@ export default function AdminPage() {
   const [newAgentName,        setNewAgentName]        = useState("");
   const [newServiceName,      setNewServiceName]      = useState("");
   const [newServiceCategory, setNewServiceCategory] =
-  useState<ServiceCategory>("prestation");
+    useState<ServiceCategory>("prestation");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [counters, setCounters] = useState<any[]>([]);
+
   // ── Chart data ───────────────────────────────────────────────────────────
   const lineData = {
     labels: ["08:00", "10:00", "12:00", "14:00", "16:00"],
@@ -338,48 +351,48 @@ export default function AdminPage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
-  loadAll();
+    loadAll();
   }, []);
 
- const handleLogout = () => setShowLogoutConfirm(true);
+  const handleLogout = () => setShowLogoutConfirm(true);
 
- const confirmLogout = () => {
-  logout?.();
-  navigate("/");
- };
- const handleAddAgent = async () => {
-  if (!newAgentName.trim()) return;
+  const confirmLogout = () => {
+    logout?.();
+    navigate("/");
+  };
 
-  await createAgent({
-    name: newAgentName.trim(),
-    password: "cnas1234",
-  });
+  const handleAddAgent = async () => {
+    if (!newAgentName.trim()) return;
 
-  await loadAll();
-  setNewAgentName("");
-  setShowAddAgentModal(false);
- };
+    await createAgent({
+      name: newAgentName.trim(),
+      password: "cnas1234",
+    });
+
+    await loadAll();
+    setNewAgentName("");
+    setShowAddAgentModal(false);
+  };
 
   const handleAddService = async () => {
-  if (!newServiceName.trim()) return;
+    if (!newServiceName.trim()) return;
 
-  await createService({
-    name: newServiceName,
-    category: newServiceCategory,
-    avg_time_min: 10,
-  });
+    await createService({
+      name: newServiceName,
+      category: newServiceCategory,
+      avg_time_min: 10,
+    });
 
-  setNewServiceName("");
-  setShowAddServiceModal(false);
-  await loadAll();
- } ;
+    setNewServiceName("");
+    setShowAddServiceModal(false);
+    await loadAll();
+  };
 
   const handleDeleteService = async (id: number) => {
-  if (!window.confirm("Are you sure you want to delete this service?")) return;
-
-  await deleteService(id);   // 🔥 CALL BACKEND
-  await loadAll();           // 🔥 REFRESH DATA FROM DB
-};
+    if (!window.confirm("Are you sure you want to delete this service?")) return;
+    await deleteService(id);
+    await loadAll();
+  };
 
   const unassignedCount = config.agents.filter(
     (a) => !a.assignedService
@@ -387,10 +400,10 @@ export default function AdminPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-<div className="admin-root">
+    <div className="admin-root">
 
-       {/* ── HEADER ── */}
-       <header className="admin-header">
+      {/* ── HEADER ── */}
+      <header className="admin-header">
         <div className="header-right-section">
           <img src={CNASLogo} alt="CNAS" className="admin-header-logo" />
           <div className="header-text-box">
@@ -399,7 +412,6 @@ export default function AdminPage() {
           </div>
         </div>
         <div className="header-left-section">
-          
           <div className="admin-profile-pill">
             <div className="admin-avatar-circle">AD</div>
             <span className="admin-profile-name">مدير النظام</span>
@@ -408,10 +420,10 @@ export default function AdminPage() {
             <FaSignOutAlt /> تسجيل الخروج
           </button>
         </div>
-       </header>
+      </header>
 
-       {/* ── MAIN ── */}
-       <main className="admin-container">
+      {/* ── MAIN ── */}
+      <main className="admin-container">
 
         {/* Stat Cards */}
         <section className="admin-stats-row">
@@ -419,7 +431,7 @@ export default function AdminPage() {
             <div className="stat-icon-wrap blue"><FaUsers /></div>
             <div className="stat-data">
               <span className="stat-label">إجمالي الوكلاء</span>
-              <span className="stat-value">{config.agents.length}</span>
+              <span className="stat-value">{stats.totalAgents}</span>
             </div>
             <button className="add-agent-btn" onClick={() => setShowAddAgentModal(true)} title="إضافة وكيل جديد">
               <FaPlus />
@@ -429,21 +441,21 @@ export default function AdminPage() {
             <div className="stat-icon-wrap orange"><FaDesktop /></div>
             <div className="stat-data">
               <span className="stat-label">الشبابيك النشطة</span>
-              <span className="stat-value">08</span>
+              <span className="stat-value">{stats.activeCounters}</span>
             </div>
           </div>
           <div className="admin-stat-card">
             <div className="stat-icon-wrap green"><FaUsers /></div>
             <div className="stat-data">
               <span className="stat-label">المواطنون في الانتظار</span>
-              <span className="stat-value">43</span>
+              <span className="stat-value">{stats.waitingCitizens}</span>
             </div>
           </div>
           <div className="admin-stat-card">
             <div className="stat-icon-wrap blue"><FaClock /></div>
             <div className="stat-data">
               <span className="stat-label">متوسط وقت الانتظار</span>
-              <span className="stat-value">12 دقيقة</span>
+              <span className="stat-value">{stats.avgWaitTime} دقيقة</span>
             </div>
           </div>
         </section>
@@ -516,27 +528,26 @@ export default function AdminPage() {
             </thead>
             <tbody>
               {counterMode === "multi" ? (
-  config.agents.map((agent) => (
-    <tr key={agent.id}>
-      <AgentAssignmentRowCells agent={agent} />
-
-      <td>
-        <button
-          className="delete-service-btn"
-          onClick={async () => {
-            if (window.confirm("Are you sure you want to delete this agent?")) {
-              await deleteAgent(agent.id);
-              await loadAll();
-            }
-          }}
-          title="حذف الوكيل"
-        >
-          <FaTrash />
-        </button>
-      </td>
-    </tr>
-  ))
-) : (
+                config.agents.map((agent) => (
+                  <tr key={agent.id}>
+                    <AgentAssignmentRowCells agent={agent} />
+                    <td>
+                      <button
+                        className="delete-service-btn"
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to delete this agent?")) {
+                            await deleteAgent(agent.id);
+                            await loadAll();
+                          }
+                        }}
+                        title="حذف الوكيل"
+                      >
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 config.agents.map((agent) => (
                   <tr key={agent.id}>
                     <td className="font-bold">{agent.name}</td>
@@ -544,9 +555,9 @@ export default function AdminPage() {
                       <button
                         className="delete-service-btn"
                         onClick={async () => {
-                                 await deleteAgent(agent.id);
-                                 await loadAll();
-                                     }}
+                          await deleteAgent(agent.id);
+                          await loadAll();
+                        }}
                         title="حذف الوكيل"
                       >
                         <FaTrash />
@@ -594,68 +605,64 @@ export default function AdminPage() {
             </tbody>
           </table>
         </section>
-{/* ── Counters Section ── */}
-<section className="admin-table-section counters-section">
-  <div className="table-header-box">
-    <h3>الشبابيك (Counters)</h3>
 
-    <button
-      className="add-service-btn"
-      onClick={async () => {
-        const name = prompt("Enter counter name:");
-        if (!name) return;
-
-        await createCounter({ name });
-        await loadAll();
-      }}
-    >
-      <FaPlus /> إضافة شباك
-    </button>
-  </div>
-
-  <table className="admin-data-table">
-    <thead>
-      <tr>
-        <th>اسم الشباك</th>
-        <th>الحالة</th>
-        <th>حذف</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {counters.map((c) => (
-        <tr key={c.id}>
-          <td className="font-bold">{c.name}</td>
-
-          <td>
-            <span className="status-badge-active">
-              {c.is_active ? "نشط" : "متوقف"}
-            </span>
-          </td>
-
-          <td>
+        {/* ── Counters Section ── */}
+        <section className="admin-table-section counters-section">
+          <div className="table-header-box">
+            <h3>الشبابيك (Counters)</h3>
             <button
-              className="delete-service-btn"
+              className="add-service-btn"
               onClick={async () => {
-                if (window.confirm("Delete this counter?")) {
-                  await deleteCounter(c.id);
-                  await loadAll();
-                }
+                const name = prompt("Enter counter name:");
+                if (!name) return;
+                await createCounter({ name });
+                await loadAll();
               }}
             >
-              <FaTrash />
+              <FaPlus /> إضافة شباك
             </button>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</section>
+          </div>
 
-       </main>
+          <table className="admin-data-table">
+            <thead>
+              <tr>
+                <th>اسم الشباك</th>
+                <th>الحالة</th>
+                <th>حذف</th>
+              </tr>
+            </thead>
+            <tbody>
+              {counters.map((c) => (
+                <tr key={c.id}>
+                  <td className="font-bold">{c.name}</td>
+                  <td>
+                    <span className="status-badge-active">
+                      {c.is_active ? "نشط" : "متوقف"}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="delete-service-btn"
+                      onClick={async () => {
+                        if (window.confirm("Delete this counter?")) {
+                          await deleteCounter(c.id);
+                          await loadAll();
+                        }
+                      }}
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
 
-       {/* ── Modal: Add Agent ── */}
-       {showAddAgentModal && (
+      </main>
+
+      {/* ── Modal: Add Agent ── */}
+      {showAddAgentModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>إضافة وكيل جديد</h3>
@@ -672,81 +679,54 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-       )}
+      )}
 
-       {/* ── Modal: Add Service ── */}
-       {showAddServiceModal && (
-       <div className="modal-overlay">
-       <div className="modal-content">
-        <h3>إضافة خدمة جديدة</h3>
+      {/* ── Modal: Add Service ── */}
+      {showAddServiceModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>إضافة خدمة جديدة</h3>
+            <input
+              type="text"
+              placeholder="اسم الخدمة"
+              value={newServiceName}
+              onChange={(e) => setNewServiceName(e.target.value)}
+              className="modal-input"
+            />
+            <select
+              value={newServiceCategory}
+              onChange={(e) => setNewServiceCategory(e.target.value as ServiceCategory)}
+              className="modal-input"
+            >
+              <option value="prestation">خدمات الاستحقاقات</option>
+              <option value="medical">الخدمات الطبية</option>
+            </select>
+            <div className="modal-buttons">
+              <button className="modal-cancel" onClick={() => setShowAddServiceModal(false)}>إلغاء</button>
+              <button className="modal-add" onClick={handleAddService}>إضافة</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-       <input
-        type="text"
-        placeholder="اسم الخدمة"
-        value={newServiceName}
-        onChange={(e) => setNewServiceName(e.target.value)}
-        className="modal-input"
-       />
+      {/* ── Modal: Logout Confirm ── */}
+      {showLogoutConfirm && (
+        <div className="modal-overlay">
+          <div className="logout-modal">
+            <h3>تأكيد تسجيل الخروج</h3>
+            <p>هل أنت متأكد أنك تريد تسجيل الخروج؟</p>
+            <div className="logout-modal-actions">
+              <button className="logout-cancel" onClick={() => setShowLogoutConfirm(false)}>
+                إلغاء
+              </button>
+              <button className="logout-confirm" onClick={confirmLogout}>
+                تسجيل الخروج
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-       <select
-        value={newServiceCategory}
-        onChange={(e) =>
-          setNewServiceCategory(e.target.value as ServiceCategory)
-        }
-        className="modal-input"
-       >
-        <option value="prestation">خدمات الاستحقاقات</option>
-        <option value="medical">الخدمات الطبية</option>
-       </select>
-
-       <div className="modal-buttons">
-        <button
-          className="modal-cancel"
-          onClick={() => setShowAddServiceModal(false)}
-        >
-          إلغاء
-        </button>
-
-        <button
-          className="modal-add"
-          onClick={handleAddService}
-        >
-          إضافة
-        </button>
-      </div>
     </div>
-     </div>
-
-     
-)
-}
-{showLogoutConfirm && (
-  <div className="modal-overlay">
-    <div className="logout-modal">
-      <h3>تأكيد تسجيل الخروج</h3>
-
-      <p>هل أنت متأكد أنك تريد تسجيل الخروج؟</p>
-
-      <div className="logout-modal-actions">
-        <button
-          className="logout-cancel"
-          onClick={() => setShowLogoutConfirm(false)}
-        >
-          إلغاء
-        </button>
-
-        <button
-          className="logout-confirm"
-          onClick={confirmLogout}
-        >
-          تسجيل الخروج
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-
-</div> 
-);
+  );
 }
