@@ -227,19 +227,20 @@ console.log("ASSIGNED CATEGORY:", assignedCategory);
     console.log("QUEUE DATA:", data);
 
     const formatted = data.map((t: any) => ({
-      id: t.id,
-      number: t.number,
-      status: t.status,
-      priority: t.priority,
-      service: t.sub_service || "—",
-      arrivalTime: t.created_at
-        ? new Date(t.created_at).toLocaleTimeString("ar-DZ", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "--:--",
-      waitMinutes: 0,
-    }));
+  id: t.id,
+  number: t.number,
+  status: t.status,
+  priority: t.priority,
+  service: t.sub_service || t.service_name || "—",
+  category: t.category, // ✅ IMPORTANT
+  arrivalTime: t.created_at
+    ? new Date(t.created_at).toLocaleTimeString("ar-DZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "--:--",
+  waitMinutes: 0,
+}));
 
     setQueue(formatted);
   } catch (err) {
@@ -433,7 +434,7 @@ useEffect(() => {
             </div>
             <div className="agent-ticket-list">
               {queue.map((ticket) => {
-                const ticketCategory = ticket.category ?? getCategoryForService(ticket.service);
+               const ticketCategory = ticket.category;
                 const catColors = CATEGORY_COLOR[ticketCategory];
                 return (
                   <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
