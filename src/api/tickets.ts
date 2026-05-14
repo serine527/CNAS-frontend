@@ -31,6 +31,11 @@ export const createTicket = async (data: {
 };
 
 // 📋 Get queue (IMPORTANT FIX: agent_id is UUID string)
+export const getCurrentTicket = async (agentId: string) => {
+  const res = await apiFetch(`/tickets/current/${agentId}`);
+  if (!res.ok) return null;
+  return res.json();
+};
 
 export const getQueue = async (category: string) => {
   const res = await apiFetch(`/tickets/queue/${category}`);

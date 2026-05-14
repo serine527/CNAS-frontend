@@ -13,7 +13,7 @@ import { FcOvertime } from "react-icons/fc";
 import type { ReactNode } from "react";
 import CNASLogo from "../../assets/CNAS_logo.png";
 import type { Ticket } from "../../types/Ticket";
-import { getQueue, callNextTicket, finishTicket, skipTicket } from "../../api/tickets";
+import { getQueue, callNextTicket, finishTicket, skipTicket, getCurrentTicket } from "../../api/tickets";
 import { AiFillSound } from "react-icons/ai";
 import "./AgentPage.css";
 import { FaSignOutAlt } from "react-icons/fa";
@@ -182,86 +182,94 @@ export default function AgentPage() {
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
 
   // ─── DERIVED ─────────────────────────────
- const agents = config?.agents ?? [];
- const agentRecord = agents.find((a) => a.id === agentId);
+  const agents = config?.agents ?? [];
+  const agentRecord = agents.find((a) => a.id === agentId);
 
   const assignedService = agentRecord ? agentRecord.assignedService : undefined;
 
   const canLoadQueue =
-  isMulti &&
-  !!agentRecord &&
-  !!agentRecord.assignedService;
+    isMulti &&
+    !!agentRecord &&
+    !!agentRecord.assignedService;
   
   const assignedCategory = agentRecord?.category;
 
-console.log("USER:", user);
-console.log("AGENT ID:", agentId);
-console.log("AGENT RECORD:", agentRecord);
-console.log("ASSIGNED SERVICE:", assignedService);
-console.log("ASSIGNED CATEGORY:", assignedCategory);
-
-  
-
+  console.log("USER:", user);
+  console.log("AGENT ID:", agentId);
+  console.log("AGENT RECORD:", agentRecord);
+  console.log("ASSIGNED SERVICE:", assignedService);
+  console.log("ASSIGNED CATEGORY:", assignedCategory);
 
   // ─── LOAD QUEUE ─────────────────────────────
   console.log("QUEUE CALL →", {
-  category: assignedCategory,
-  subService: assignedService,
-});
- const loadQueue = useCallback(async () => {
-  try {
-    if (!assignedCategory) return;
+    category: assignedCategory,
+    subService: assignedService,
+  });
 
-    console.log("LOADING CATEGORY:", assignedCategory);
+  const loadQueue = useCallback(async () => {
+    try {
+      if (!assignedCategory) return;
 
-    const data = await getQueue(assignedCategory);
-    const mapStatus = (s: any): TicketStatus => {
-     switch (s) {
-    case 0: return "waiting";
-    case 1: return "serving";
-    case 2: return "done";
-    case 3: return "skipped";
-    default: return "waiting";
-  }
-};
-    console.log("QUEUE DATA:", data);
+      console.log("LOADING CATEGORY:", assignedCategory);
 
-    const formatted = data.map((t: any) => ({
-  id: t.id,
-  number: t.number,
-  status: t.status,
-  priority: t.priority,
-  service: t.sub_service || t.service_name || "—",
-  category: t.category, // ✅ IMPORTANT
-  arrivalTime: t.created_at
-    ? new Date(t.created_at).toLocaleTimeString("ar-DZ", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "--:--",
-  waitMinutes: 0,
-}));
+      const [data, currentTicket] = await Promise.all([
+        getQueue(assignedCategory),
+       agentId ? getCurrentTicket(agentId).catch(() => null) : null,
+      ]);
 
-    setQueue(formatted);
-  } catch (err) {
-    console.error("Queue error:", err);
-    setQueue([]);
-  }
-}, [assignedCategory, isMulti, agentRecord]);
+      console.log("QUEUE DATA:", data);
+      console.log("CURRENT TICKET:", currentTicket);
 
+      const formatted = data.map((t: any) => ({
+        id: t.id,
+        number: t.number,
+        status: t.status,
+        priority: t.priority,
+        service: t.sub_service || t.service_name || "—",
+        category: t.category,
+        arrivalTime: t.created_at
+          ? new Date(t.created_at).toLocaleTimeString("ar-DZ", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "--:--",
+        waitMinutes: 0,
+      }));
 
+      // ✅ prepend the serving ticket if it exists
+      if (currentTicket) {
+        const serving = {
+          id: currentTicket.id,
+          number: currentTicket.number,
+          status: "serving" as TicketStatus,
+          priority: currentTicket.priority,
+          service: currentTicket.sub_service || "—",
+          category: assignedCategory,
+          arrivalTime: currentTicket.created_at
+            ? new Date(currentTicket.created_at).toLocaleTimeString("ar-DZ", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "--:--",
+          waitMinutes: 0,
+        };
+        setQueue([serving, ...formatted]);
+      } else {
+        setQueue(formatted);
+      }
+    } catch (err) {
+      console.error("Queue error:", err);
+      setQueue([]);
+    }
+  }, [assignedCategory, isMulti, agentRecord, agentId]);
 
-useEffect(() => {
-  if (!assignedCategory || !agentId) return;
-
-  loadQueue();
-}, [assignedCategory, loadQueue]);
+  useEffect(() => {
+    if (!assignedCategory || !agentId) return;
+    loadQueue();
+  }, [assignedCategory, loadQueue]);
 
   // ─── DERIVED QUEUE ─────────────────────────────
- const current =
-  queue.find((t) => t.status === "serving") ||
-  queue.find((t) => t.status === "waiting") ||
-  null;
+  const current = queue.find((t) => t.status === "serving") || null;
 
   const waiting = queue.filter((t) => t.status === "waiting");
 
@@ -308,13 +316,10 @@ useEffect(() => {
   };
 
   const recallCurrent = () => {
-  if (!current) return;
-
-  playDing(); // existing tone
-  playNotification(); // 🔁 repeat main alert sound
-
-  notify(`إعادة استدعاء التذكرة ${current.number}`);
-};
+    if (!current) return;
+    playNotification();
+    notify(`إعادة استدعاء التذكرة ${current.number}`);
+  };
 
   const handleLogout = () => {
     logout?.();
@@ -341,7 +346,6 @@ useEffect(() => {
       )}
 
       {/* ── HEADER ── */}
-       
       <header className="agent-header">
         <div className="agent-header-left">
           <img src={CNASLogo} alt="CNAS" className="agent-header-logo" />
@@ -351,553 +355,507 @@ useEffect(() => {
           </div>
         </div>
 
-       {/* <div className="agent-header-center">
-          <div className="agent-clock-box">
-            <Clock />
-            <span className="agent-clock-date">
-              {new Date().toLocaleDateString("ar-DZ", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-        </div>*/}
+        <div className="agent-header-right">
+          <ModeBadge
+            isMulti={isMulti}
+            assignedService={assignedService}
+            category={assignedCategory}
+          />
 
-       <div className="agent-header-right">
-  <ModeBadge
-    isMulti={isMulti}
-    assignedService={assignedService}
-    category={assignedCategory}
-  />
-
-  <div className={`agent-status-badge ${isPaused ? "paused" : "active"}`}>
-    <div className={`agent-status-dot ${isPaused ? "paused" : "active"}`} />
-    {isPaused ? "موقوف" : "نشط"}
-  </div>
-
-  {/* ✅ MENU BUTTON HERE */}
-  <div className="agent-menu-wrapper">
-    <button
-      className="agent-menu-btn"
-      onClick={(e) => {
-        e.stopPropagation();
-        setShowMenu((prev) => !prev);
-      }}
-    >
-      <FiMenu />
-    </button>
-  </div>
-
-  <button onClick={handleLogout} className="agent-logout-btn">
-    <FaSignOutAlt /> تسجيل الخروج
-  </button>
- </div>
-         </header>
-
-           {/* ── MAIN ── */}
-          <div className="agent-content">
-          <main className="agent-main">
-             {view === "dashboard" && (
-    <>
-             {/* Sidebar */}
-           <aside className="agent-sidebar">
-          <div className="agent-stats-row">
-            {statCards.map((s) => (
-              <div key={s.label} className="agent-stat-card" style={{ borderTop: `3px solid ${s.color}` }}>
-                <span className="agent-stat-value" style={{ color: s.color }}>{s.value}</span>
-                <span className="agent-stat-label">{s.label}</span>
-              </div>
-            ))}
+          <div className={`agent-status-badge ${isPaused ? "paused" : "active"}`}>
+            <div className={`agent-status-dot ${isPaused ? "paused" : "active"}`} />
+            {isPaused ? "موقوف" : "نشط"}
           </div>
 
-          {/* Queue Panel */}
-          <div className="agent-queue-panel">
-            <div className="agent-panel-header">
-              <span className="agent-panel-title">قائمة الانتظار</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {isMulti && assignedCategory && (
-                  <span
-                    className="queue-category-chip"
-                    style={{
-                      background: CATEGORY_COLOR[assignedCategory].bg,
-                      color: CATEGORY_COLOR[assignedCategory].text,
-                      border: `1px solid ${CATEGORY_COLOR[assignedCategory].border}`,
-                    }}
-                  >
-                    {CATEGORY_LABEL[assignedCategory]}
-                  </span>
-                )}
-                <span className="agent-queue-count">{waiting.length} متبقٍ</span>
-              </div>
-            </div>
-            <div className="agent-ticket-list">
-              {queue.map((ticket) => {
-               const ticketCategory = ticket.category;
-                const catColors = CATEGORY_COLOR[ticketCategory];
-                return (
-                  <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
-                    <span className="agent-ticket-num" style={{ color: STATUS_COLOR[ticket.status] }}>
-                     {ticket.number}
-                     {ticket.priority && <span style={{ marginLeft: 6 }}>⭐</span>}
-                    </span>
-                    <div className="agent-ticket-info">
-                      <span className="agent-ticket-service">{ticket.service}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                        {!isMulti && (
-                          <span
-                            className="ticket-cat-pill"
-                            style={{ background: catColors.bg, color: catColors.text }}
-                          >
-                            {CATEGORY_LABEL[ticketCategory]}
-                          </span>
-                        )}
-                        <span className="agent-ticket-time">
-                          وصل: {ticket.arrivalTime}
-                          {ticket.status === "waiting" && ` · انتظر ${ticket.waitMinutes} د`}
+          <div className="agent-menu-wrapper">
+            <button
+              className="agent-menu-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu((prev) => !prev);
+              }}
+            >
+              <FiMenu />
+            </button>
+          </div>
+
+          <button onClick={handleLogout} className="agent-logout-btn">
+            <FaSignOutAlt /> تسجيل الخروج
+          </button>
+        </div>
+      </header>
+
+      {/* ── MAIN ── */}
+      <div className="agent-content">
+        <main className="agent-main">
+          {view === "dashboard" && (
+            <>
+              {/* Sidebar */}
+              <aside className="agent-sidebar">
+                <div className="agent-stats-row">
+                  {statCards.map((s) => (
+                    <div key={s.label} className="agent-stat-card" style={{ borderTop: `3px solid ${s.color}` }}>
+                      <span className="agent-stat-value" style={{ color: s.color }}>{s.value}</span>
+                      <span className="agent-stat-label">{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Queue Panel */}
+                <div className="agent-queue-panel">
+                  <div className="agent-panel-header">
+                    <span className="agent-panel-title">قائمة الانتظار</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {isMulti && assignedCategory && (
+                        <span
+                          className="queue-category-chip"
+                          style={{
+                            background: CATEGORY_COLOR[assignedCategory].bg,
+                            color: CATEGORY_COLOR[assignedCategory].text,
+                            border: `1px solid ${CATEGORY_COLOR[assignedCategory].border}`,
+                          }}
+                        >
+                          {CATEGORY_LABEL[assignedCategory]}
                         </span>
+                      )}
+                      <span className="agent-queue-count">{waiting.length} متبقٍ</span>
+                    </div>
+                  </div>
+                  <div className="agent-ticket-list">
+                    {queue.map((ticket) => {
+                      const ticketCategory = ticket.category;
+                      const catColors = CATEGORY_COLOR[ticketCategory];
+                      return (
+                        <div key={ticket.id} className={`agent-ticket-row ${ticket.status}`}>
+                          <span className="agent-ticket-num" style={{ color: STATUS_COLOR[ticket.status] }}>
+                            {ticket.number}
+                            {ticket.priority && <span style={{ marginLeft: 6 }}>⭐</span>}
+                          </span>
+                          <div className="agent-ticket-info">
+                            <span className="agent-ticket-service">{ticket.service}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                              {!isMulti && (
+                                <span
+                                  className="ticket-cat-pill"
+                                  style={{ background: catColors.bg, color: catColors.text }}
+                                >
+                                  {CATEGORY_LABEL[ticketCategory]}
+                                </span>
+                              )}
+                              <span className="agent-ticket-time">
+                                وصل: {ticket.arrivalTime}
+                                {ticket.status === "waiting" && ` · انتظر ${ticket.waitMinutes} د`}
+                              </span>
+                            </div>
+                          </div>
+                          <span
+                            className="agent-ticket-badge"
+                            style={{
+                              backgroundColor: STATUS_COLOR[ticket.status] + "22",
+                              color: STATUS_COLOR[ticket.status],
+                            }}
+                          >
+                            {STATUS_LABEL[ticket.status]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </aside>
+
+              {/* Main Column */}
+              <section className="agent-main-col">
+
+                {/* Assigned Service Banner — multi mode only */}
+                {isMulti && assignedService && assignedCategory && (
+                  <AssignedServiceBanner service={assignedService} category={assignedCategory} />
+                )}
+
+                {/* Warning: multi mode but agent has no assignment yet */}
+                {isMulti && !assignedService && (
+                  <div className="agent-unassigned-warning">
+                    <span className="agent-unassigned-icon">⚠</span>
+                    <div className="agent-unassigned-text">
+                      <strong>لم يتم تخصيص خدمة لهذا الشباك بعد.</strong>
+                      <span>يرجى مراجعة المدير لتعيين الخدمة المناسبة.</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Current Ticket Card */}
+                <div className="agent-current-card">
+                  <div className="agent-current-card-header">
+                    <div className="agent-pulse-ring" />
+                    <span className="agent-current-label">التذكرة الحالية</span>
+                    {current && !isMulti && (
+                      <span
+                        className="current-cat-chip"
+                        style={{
+                          background: CATEGORY_COLOR[getCategoryForService(current.service)].bg,
+                          color:      CATEGORY_COLOR[getCategoryForService(current.service)].text,
+                          border:    `1px solid ${CATEGORY_COLOR[getCategoryForService(current.service)].border}`,
+                        }}
+                      >
+                        {CATEGORY_LABEL[getCategoryForService(current.service)]}
+                      </span>
+                    )}
+                  </div>
+
+                  {current ? (
+                    <div className="agent-current-body">
+                      <div className="agent-big-ticket-num">
+                        {current.number}
+                        {current.priority && <span style={{ marginLeft: 8 }}></span>}
+                      </div>
+                      <div className="agent-current-service">{current.service}</div>
+                      <div className="agent-current-meta">
+                        <div className="agent-meta-item">
+                          <span className="agent-meta-key">وقت الوصول</span>
+                          <span className="agent-meta-val">{current.arrivalTime}</span>
+                        </div>
+                        <div className="agent-meta-divider" />
+                        <div className="agent-meta-item">
+                          <span className="agent-meta-key">وقت الانتظار</span>
+                          <span className="agent-meta-val">{current.waitMinutes} دقيقة</span>
+                        </div>
+                        <div className="agent-meta-divider" />
+                        <div className="agent-meta-item">
+                          <span className="agent-meta-key">التذكرة التالية</span>
+                          <span className="agent-meta-val">{waiting[0]?.number ?? "—"}</span>
+                        </div>
                       </div>
                     </div>
-                    <span
-                      className="agent-ticket-badge"
-                      style={{
-                        backgroundColor: STATUS_COLOR[ticket.status] + "22",
-                        color: STATUS_COLOR[ticket.status],
-                      }}
-                    >
-                      {STATUS_LABEL[ticket.status]}
-                    </span>
-                    
-                  </div>
-                );
-              })}
-              
-            </div>
-            
-          </div>
-          
-        </aside>
+                  ) : (
+                    <div className="agent-empty-state">
+                      <div className="agent-empty-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 6v6l4 2" />
+                        </svg>
+                      </div>
+                      <p className="agent-empty-text">لا توجد تذكرة قيد الخدمة</p>
+                    </div>
+                  )}
+                </div>
 
-        {/* Main Column */}
-        <section className="agent-main-col">
+                {/* Action Buttons */}
+                <div className="agent-actions-grid">
+                  <button
+                    onClick={togglePause}
+                    className={`agent-action-btn ${isPaused ? "agent-btn-resume" : "agent-btn-pause"}`}
+                  >
+                    <span className="agent-btn-icon">{isPaused ? "▶" : "⏸"}</span>
+                    {isPaused ? "استئناف الخدمة" : "إيقاف مؤقت"}
+                  </button>
 
-          {/* Assigned Service Banner — multi mode only */}
-          {isMulti && assignedService && assignedCategory && (
-            <AssignedServiceBanner service={assignedService} category={assignedCategory} />
-          )}
+                  <button
+                    onClick={callNext}
+                    disabled={isPaused || waiting.length === 0}
+                    className="agent-action-btn agent-btn-primary"
+                    style={{ opacity: isPaused || waiting.length === 0 ? 0.5 : 1 }}
+                  >
+                    <span className="agent-btn-icon">▶▶</span>
+                    استدعاء التذكرة التالية
+                    {waiting[0] && <span className="agent-btn-sub">{waiting[0].number}</span>}
+                  </button>
 
-          {/* Warning: multi mode but agent has no assignment yet */}
-          {isMulti && !assignedService && (
-            <div className="agent-unassigned-warning">
-              <span className="agent-unassigned-icon">⚠</span>
-              <div className="agent-unassigned-text">
-                <strong>لم يتم تخصيص خدمة لهذا الشباك بعد.</strong>
-                <span>يرجى مراجعة المدير لتعيين الخدمة المناسبة.</span>
-              </div>
-            </div>
-          )}
+                  <button
+                    onClick={skipCurrent}
+                    disabled={!current}
+                    className="agent-action-btn agent-btn-danger"
+                    style={{ opacity: current ? 1 : 0.4 }}
+                  >
+                    <span className="agent-btn-icon">⏭</span>
+                    تخطي التذكرة
+                  </button>
+                </div>
 
-          {/* Current Ticket Card */}
-          <div className="agent-current-card">
-            <div className="agent-current-card-header">
-              <div className="agent-pulse-ring" />
-              <span className="agent-current-label">التذكرة الحالية</span>
-              {current && !isMulti && (
-                <span
-                  className="current-cat-chip"
-                  style={{
-                    background: CATEGORY_COLOR[getCategoryForService(current.service)].bg,
-                    color:      CATEGORY_COLOR[getCategoryForService(current.service)].text,
-                    border:    `1px solid ${CATEGORY_COLOR[getCategoryForService(current.service)].border}`,
-                  }}
+                <button
+                  onClick={recallCurrent}
+                  disabled={!current}
+                  className="agent-action-btn agent-btn-secondary"
+                  style={{ marginTop: "12px", opacity: current ? 1 : 0.4 }}
                 >
-                  {CATEGORY_LABEL[getCategoryForService(current.service)]}
-                </span>
-              )}
+                  <span className="agent-btn-icon"><AiFillSound /></span>
+                  إعادة الاستدعاء
+                </button>
+
+                {/* Done Log */}
+                {done.length > 0 && (
+                  <div className="agent-done-panel">
+                    <span className="agent-panel-title">السجل الأخير</span>
+                    <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
+                      {done.slice(-5).reverse().map((t) => (
+                        <div key={t.id} className="agent-done-row">
+                          <span className="agent-done-num" style={{ color: STATUS_COLOR[t.status] }}>
+                            {t.number}
+                          </span>
+                          <span className="agent-done-service">{t.service}</span>
+                          <span
+                            className="agent-done-badge"
+                            style={{
+                              color: STATUS_COLOR[t.status],
+                              backgroundColor: STATUS_COLOR[t.status] + "18",
+                            }}
+                          >
+                            {STATUS_LABEL[t.status]}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+
+          {view === "profile" && (
+            <div className="profile-page">
+              <div className="profile-card">
+                <h2>الملف الشخصي</h2>
+                <p><strong>اسم المستخدم:</strong> {username}</p>
+
+                <p>
+                  <strong>الاسم:</strong>
+                  <input
+                    className="profile-input"
+                    value={profileData.name}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, name: e.target.value })
+                    }
+                  />
+                </p>
+
+                <p>
+                  <strong>اللقب:</strong>
+                  <input
+                    className="profile-input"
+                    value={profileData.lastName}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, lastName: e.target.value })
+                    }
+                  />
+                </p>
+
+                <p>
+                  <strong>الخدمة:</strong>
+                  <input
+                    className="profile-input"
+                    value={assignedService || ""}
+                    disabled
+                  />
+                </p>
+
+                <p><strong>الهيكل:</strong> {agentRecord?.structure || "-"}</p>
+                <p><strong>الشباك / الطابور:</strong> {agentRecord?.queue || "-"}</p>
+
+                {isMulti && (
+                  <>
+                    <p>
+                      <strong>التصنيف:</strong>{" "}
+                      {assignedCategory === "medical"
+                        ? "الخدمات الطبية"
+                        : assignedCategory === "prestation"
+                        ? "خدمات الاستحقاقات"
+                        : "-"}
+                    </p>
+                    <p>
+                      <strong>الخدمة الفرعية:</strong>{" "}
+                      {agentRecord?.subService || "-"}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* ─── PROFILE MODAL ───────────────────────────── */}
+      {showProfile && (
+        <div className="profile-modal-overlay">
+          <div className="profile-modal">
+            <h3>Profile</h3>
+
+            <div className="profile-section">
+              <label>Name</label>
+              <input
+                value={profileData.name}
+                onChange={(e) =>
+                  setProfileData({ ...profileData, name: e.target.value })
+                }
+              />
             </div>
 
-            {current ? (
-              <div className="agent-current-body">
-                <div className="agent-big-ticket-num">
-                    {current.number}
-                     {current.priority && <span style={{ marginLeft: 8 }}></span>}
-                </div>
-                <div className="agent-current-service">{current.service}</div>
-                <div className="agent-current-meta">
-                  <div className="agent-meta-item">
-                    <span className="agent-meta-key">وقت الوصول</span>
-                    <span className="agent-meta-val">{current.arrivalTime}</span>
-                  </div>
-                  <div className="agent-meta-divider" />
-                  <div className="agent-meta-item">
-                    <span className="agent-meta-key">وقت الانتظار</span>
-                    <span className="agent-meta-val">{current.waitMinutes} دقيقة</span>
-                  </div>
-                  <div className="agent-meta-divider" />
-                  <div className="agent-meta-item">
-                    <span className="agent-meta-key">التذكرة التالية</span>
-                    <span className="agent-meta-val">{waiting[0]?.number ?? "—"}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="agent-empty-state">
-  <div className="agent-empty-icon">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 6v6l4 2" />
-    </svg>
-  </div>
+            <div className="profile-section">
+              <label>Last Name</label>
+              <input
+                value={profileData.lastName}
+                onChange={(e) =>
+                  setProfileData({ ...profileData, lastName: e.target.value })
+                }
+              />
+            </div>
 
-  <p className="agent-empty-text">لا توجد تذكرة قيد الخدمة</p>
-</div>
-            )}
+            <div className="profile-section">
+              <label>Username</label>
+              <input value={profileData.username} disabled />
+            </div>
+
+            <div className="profile-section">
+              <label>Guichet</label>
+              <input value={profileData.guichet} disabled />
+            </div>
+
+            <div className="profile-section">
+              <label>Service</label>
+              <input value={profileData.service} disabled />
+            </div>
+
+            <div className="profile-section">
+              <label>Sous Service</label>
+              <input value={profileData.sousService} disabled />
+            </div>
+
+            <div className="profile-section">
+              <label>Mot de passe</label>
+              <input
+                type="password"
+                value={profileData.password}
+                onChange={(e) =>
+                  setProfileData({ ...profileData, password: e.target.value })
+                }
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="save-btn" onClick={() => setShowProfile(false)}>
+                Save
+              </button>
+              <button className="close-btn" onClick={() => setShowProfile(false)}>
+                Close
+              </button>
+            </div>
           </div>
+        </div>
+      )}
 
-          {/* Action Buttons */}
-          <div className="agent-actions-grid">
-            <button
-              onClick={togglePause}
-              className={`agent-action-btn ${isPaused ? "agent-btn-resume" : "agent-btn-pause"}`}
-            >
-              <span className="agent-btn-icon">{isPaused ? "▶" : "⏸"}</span>
-              {isPaused ? "استئناف الخدمة" : "إيقاف مؤقت"}
-            </button>
+      {view === "password" && (
+        <div className="profile-page">
+          <div className="profile-card">
+            <h2>تغيير كلمة المرور</h2>
 
-            <button
-              onClick={callNext}
-              disabled={isPaused || waiting.length === 0}
-              className="agent-action-btn agent-btn-primary"
-              style={{ opacity: isPaused || waiting.length === 0 ? 0.5 : 1 }}
-            >
-              <span className="agent-btn-icon">▶▶</span>
-              استدعاء التذكرة التالية
-              {waiting[0] && <span className="agent-btn-sub">{waiting[0].number}</span>}
-            </button>
+            <p>
+              <strong>كلمة المرور الحالية:</strong>
+              <input
+                type="password"
+                className="profile-input"
+                value={passwordData.current}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, current: e.target.value })
+                }
+              />
+            </p>
 
-            <button
-              onClick={skipCurrent}
-              disabled={!current}
-              className="agent-action-btn agent-btn-danger"
-              style={{ opacity: current ? 1 : 0.4 }}
-            >
-              <span className="agent-btn-icon">⏭</span>
-              تخطي التذكرة
-            </button>
+            <p>
+              <strong>كلمة المرور الجديدة:</strong>
+              <input
+                type="password"
+                className="profile-input"
+                value={passwordData.new}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, new: e.target.value })
+                }
+              />
+            </p>
+
+            <p>
+              <strong>تأكيد كلمة المرور:</strong>
+              <input
+                type="password"
+                className="profile-input"
+                value={passwordData.confirm}
+                onChange={(e) =>
+                  setPasswordData({ ...passwordData, confirm: e.target.value })
+                }
+              />
+            </p>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="save-btn" onClick={() => setShowConfirmPopup(true)}>
+                حفظ
+              </button>
+              <button className="close-btn" onClick={() => setView("dashboard")}>
+                إلغاء
+              </button>
+            </div>
           </div>
+        </div>
+      )}
+
+      <div className={`agent-drawer ${showMenu ? "open" : ""}`}>
+        <div className="agent-drawer-header">
+          <div className="drawer-user">
+            <div className="drawer-avatar">
+              {username ? username.charAt(0).toUpperCase() : "A"}
+            </div>
+            <div>
+              <div className="drawer-name">{username}</div>
+              <div className="drawer-role">Agent CNAS</div>
+            </div>
+          </div>
+          <button onClick={() => setShowMenu(false)}>✕</button>
+        </div>
+
+        <div className="agent-drawer-content">
+          <button
+            className="drawer-item"
+            onClick={() => setProfileMenu((p) => !p)}
+          >
+            <FiUser /> الملف الشخصي
+          </button>
+          {profileMenu && (
+            <div className="drawer-submenu">
+              <button
+                className="drawer-subitem"
+                onClick={() => {
+                  setView("profile");
+                  setProfileMenu(false);
+                }}
+              >
+                عرض الملف الشخصي
+              </button>
+              <button
+                className="drawer-subitem"
+                onClick={() => {
+                  setView("password");
+                  setProfileMenu(false);
+                }}
+              >
+                تغيير كلمة المرور
+              </button>
+            </div>
+          )}
 
           <button
-            onClick={recallCurrent}
-            disabled={!current}
-            className="agent-action-btn agent-btn-secondary"
-            style={{ marginTop: "12px", opacity: current ? 1 : 0.4 }}
+            className="drawer-item"
+            onClick={() => {
+              setView("dashboard");
+              setShowMenu(false);
+            }}
           >
-            <span className="agent-btn-icon"><AiFillSound /></span>
-            إعادة الاستدعاء
+            ⬅ العودة إلى الرئيسية
           </button>
 
-          {/* Done Log */}
-          {done.length > 0 && (
-            <div className="agent-done-panel">
-              <span className="agent-panel-title">السجل الأخير</span>
-              <div style={{ display: "flex", flexDirection: "column", marginTop: 12 }}>
-                {done.slice(-5).reverse().map((t) => (
-                  <div key={t.id} className="agent-done-row">
-                    <span className="agent-done-num" style={{ color: STATUS_COLOR[t.status] }}>
-                      {t.number}
-                    </span>
-                    <span className="agent-done-service">{t.service}</span>
-                    <span
-                      className="agent-done-badge"
-                      style={{
-                        color: STATUS_COLOR[t.status],
-                        backgroundColor: STATUS_COLOR[t.status] + "18",
-                      }}
-                    >
-                      {STATUS_LABEL[t.status]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-        </>
-  )}
-
-  {view === "profile" && (
-
-   
-
-    <div className="profile-page">
-
-     
-
-      <div className="profile-card">
-
-         <h2>الملف الشخصي</h2>
-        <p><strong>اسم المستخدم:</strong> {username}</p>
-
-      <p>
-  <strong>الاسم:</strong>
-  <input
-    className="profile-input"
-    value={profileData.name}
-    onChange={(e) =>
-      setProfileData({ ...profileData, name: e.target.value })
-    }
-  />
-</p>
-
-<p>
-  <strong>اللقب:</strong>
-  <input
-    className="profile-input"
-    value={profileData.lastName}
-    onChange={(e) =>
-      setProfileData({ ...profileData, lastName: e.target.value })
-    }
-  />
-</p>
-
-{/* ✅ moved here */}
-<p>
-  <strong>الخدمة:</strong>
-  <input
-    className="profile-input"
-    value={assignedService || ""}
-    disabled
-  />
-</p>
-
-<p><strong>الهيكل:</strong> {agentRecord?.structure || "-"}</p>
-
-<p><strong>الشباك / الطابور:</strong> {agentRecord?.queue || "-"}</p>
-
-        {isMulti && (
-          <>
-            <p>
-              <strong>التصنيف:</strong>{" "}
-              {assignedCategory === "medical"
-                ? "الخدمات الطبية"
-                : assignedCategory === "prestation"
-                ? "خدمات الاستحقاقات"
-                : "-"}
-            </p>
-
-            <p>
-              <strong>الخدمة الفرعية:</strong>{" "}
-              {agentRecord?.subService || "-"}
-            </p>
-          </>
-        )}
+          <button
+            className="drawer-item logout"
+            onClick={handleLogout}
+          >
+            <FaSignOutAlt /> تسجيل الخروج
+          </button>
+        </div>
       </div>
-    
-    </div>
-   )}
-
-  
-      </main>
-    </div>
-     {/* ─── PROFILE MODAL ───────────────────────────── */}
-     {showProfile && (
-     <div className="profile-modal-overlay">
-       <div className="profile-modal">
-
-      <h3>Profile</h3>
-
-      <div className="profile-section">
-        <label>Name</label>
-        <input
-          value={profileData.name}
-          onChange={(e) =>
-            setProfileData({ ...profileData, name: e.target.value })
-          }
-        />
-      </div>
-
-      <div className="profile-section">
-        <label>Last Name</label>
-        <input
-          value={profileData.lastName}
-          onChange={(e) =>
-            setProfileData({ ...profileData, lastName: e.target.value })
-          }
-        />
-      </div>
-
-      <div className="profile-section">
-        <label>Username</label>
-        <input value={profileData.username} disabled />
-      </div>
-
-      <div className="profile-section">
-        <label>Guichet</label>
-        <input value={profileData.guichet} disabled />
-      </div>
-
-      <div className="profile-section">
-        <label>Service</label>
-        <input value={profileData.service} disabled />
-      </div>
-
-      <div className="profile-section">
-        <label>Sous Service</label>
-        <input value={profileData.sousService} disabled />
-      </div>
-
-      <div className="profile-section">
-        <label>Mot de passe</label>
-        <input
-          type="password"
-          value={profileData.password}
-          onChange={(e) =>
-            setProfileData({ ...profileData, password: e.target.value })
-          }
-        />
-      </div>
-
-      <div style={{ display: "flex", gap: 10 }}>
-        <button className="save-btn" onClick={() => setShowProfile(false)}>
-          Save
-        </button>
-
-        <button className="close-btn" onClick={() => setShowProfile(false)}>
-          Close
-        </button>
-      </div>
-
-    </div>
-  </div>
-)}
-{view === "password" && (
-  <div className="profile-page">
-    <div className="profile-card">
-
-      <h2>تغيير كلمة المرور</h2>
-
-      <p>
-        <strong>كلمة المرور الحالية:</strong>
-        <input
-          type="password"
-          className="profile-input"
-          value={passwordData.current}
-          onChange={(e) =>
-            setPasswordData({ ...passwordData, current: e.target.value })
-          }
-        />
-      </p>
-
-      <p>
-        <strong>كلمة المرور الجديدة:</strong>
-        <input
-          type="password"
-          className="profile-input"
-          value={passwordData.new}
-          onChange={(e) =>
-            setPasswordData({ ...passwordData, new: e.target.value })
-          }
-        />
-      </p>
-
-      <p>
-        <strong>تأكيد كلمة المرور:</strong>
-        <input
-          type="password"
-          className="profile-input"
-          value={passwordData.confirm}
-          onChange={(e) =>
-            setPasswordData({ ...passwordData, confirm: e.target.value })
-          }
-        />
-      </p>
-
-      <div style={{ display: "flex", gap: 10 }}>
-        <button className="save-btn" onClick={() => setShowConfirmPopup(true)}>
-          حفظ
-        </button>
-
-        <button className="close-btn" onClick={() => setView("dashboard")}>
-          إلغاء
-        </button>
-      </div>
-
-    </div>
-  </div>
-)}
- <div className={`agent-drawer ${showMenu ? "open" : ""}`}>
-  
-  <div className="agent-drawer-header">
-    <div className="drawer-user">
-      <div className="drawer-avatar">
-        {username ? username.charAt(0).toUpperCase() : "A"}
-      </div>
-      <div>
-        <div className="drawer-name">{username}</div>
-        <div className="drawer-role">Agent CNAS</div>
-      </div>
-    </div>
-
-    <button onClick={() => setShowMenu(false)}>✕</button>
-  </div>
-
-  <div className="agent-drawer-content">
-    <button
-  className="drawer-item"
-  onClick={() => setProfileMenu((p) => !p)}
- >
-  <FiUser /> الملف الشخصي
- </button>
- {profileMenu && (
-  <div className="drawer-submenu">
-    
-    {/* Profile view */}
-    <button
-      className="drawer-subitem"
-      onClick={() => {
-        setView("profile");
-        setProfileMenu(false);
-      }}
-    >
-      عرض الملف الشخصي
-    </button>
-
-    {/* Password view */}
-    <button
-      className="drawer-subitem"
-      onClick={() => {
-        setView("password");
-        setProfileMenu(false);
-      }}
-    >
-      تغيير كلمة المرور
-    </button>
-
-  </div>
-)}
-
-<button
-  className="drawer-item"
-  onClick={() => {
-    setView("dashboard");
-    setShowMenu(false);
-  }}
->
-   ⬅ العودة إلى الرئيسية
-</button>
-
-    <button
-      className="drawer-item logout"
-      onClick={handleLogout}
-    >
-      <FaSignOutAlt /> تسجيل الخروج
-    </button>
-  </div>
-
-</div>
-
     </div>
   );
-  
 }

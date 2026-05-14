@@ -462,4 +462,29 @@ useEffect(() => {
       </div>
     </div>
   );
+useEffect(() => {
+  if (!ticket?.id) return;
+
+  console.log("🔌 Connecting to WS room:", `ws://127.0.0.1:8000/ws/ticket/${ticket.id}`);
+
+  const ws = new WebSocket(`ws://127.0.0.1:8000/ws/ticket/${ticket.id}`);
+
+  ws.onopen = () => console.log("✅ WS connected");
+  ws.onerror = (e) => console.log("❌ WS error", e);
+  ws.onclose = (e) => console.log("🔴 WS closed", e.code, e.reason);
+
+  ws.onmessage = (event) => {
+    console.log("📩 WS message received:", event.data);
+    const data = JSON.parse(event.data);
+
+    if (data.type === "ticket_called") {
+      setCalled(true);
+      setCalledData(data);
+      new Audio("/mixkit-message-pop-alert-2354.mp3").play().catch(() => {});
+    }
+  };
+
+  return () => ws.close();
+}, [ticket?.id]);  
+ws.onopen = () => console.log("✅ Connected to room:", ticket.id);
 }
